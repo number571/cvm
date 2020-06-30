@@ -123,17 +123,20 @@ extern BigInt *read_sm(FILE *file) {
     while(fgets(buffer, BUFSIZ, file) != NULL) {
         line = _readcode(buffer, file, &code);
         switch(code) {
+            // push x
             case PUSH_CODE: {
                 BigInt *num = new_bigint(line);
                 push_stack(stack, num);
             }
             break;
+            // pop
             case POP_CODE: {
                 BigInt *num = pop_stack(stack).bigint;
                 cpy_bigint(value, num);
                 free_bigint(num);
             }
             break;
+            // [add|sub|mul|div]
             case ADD_CODE: case SUB_CODE: case MUL_CODE: case DIV_CODE: {
                 BigInt *x = pop_stack(stack).bigint;
                 BigInt *y = pop_stack(stack).bigint;
@@ -156,11 +159,15 @@ extern BigInt *read_sm(FILE *file) {
                 free_bigint(y);
             }
             break;
+            // jmp label
             case JMP_CODE: {
                 int32_t index = get_hashtab(hashtab, line).decimal;
                 fseek(file, index, SEEK_SET);
             }
             break;
+            // push x
+            // push y
+            // j[l|g|e|ne] label
             case JL_CODE: case JG_CODE: case JE_CODE: case JNE_CODE: {
                 int32_t index = get_hashtab(hashtab, line).decimal;
                 BigInt *x = pop_stack(stack).bigint;
@@ -192,12 +199,13 @@ extern BigInt *read_sm(FILE *file) {
                 free_bigint(x);
             }
             break;
+            // store $x y
+            // store $x $y
+            // store $x $-y
+            // store $-x y
+            // store $-x $y
+            // store $-x $-y
             case STORE_CODE:
-                // store $x y
-                // store $x $y
-                // store $-x y
-                // store $-x $y
-                // store $-x $-y
                 if (line[0] == '$') {
                     char *arg = line + strlen(line) + 1;
                     while(isspace(*arg)) {
@@ -215,7 +223,6 @@ extern BigInt *read_sm(FILE *file) {
                         index = atoi(line+1);
                     }
                     BigInt *x = get_stack(stack, index).bigint;
-                    free_bigint(x);
                     if (arg[0] == '$') {
                         size_t i2 = 0;
                         if (arg[1] == '-') {
@@ -225,15 +232,17 @@ extern BigInt *read_sm(FILE *file) {
                         }
                         BigInt *num = dup_bigint(get_stack(stack, i2).bigint);
                         set_stack(stack, index, num);
+                        free_bigint(x);
                         break;
                     }
                     BigInt *num = new_bigint(arg);
                     set_stack(stack, index, num);
+                    free_bigint(x);
                 }
             break;
+            // load $x
+            // load $-x
             case LOAD_CODE:
-                // load $x
-                // load $-x
                 if (line[0] == '$') {
                     size_t index = 0;
                     if (line[1] == '-') {
@@ -245,6 +254,7 @@ extern BigInt *read_sm(FILE *file) {
                     push_stack(stack, num);
                 }
             break;
+            // call label
             case CALL_CODE: {
                 BigInt *num = new_bigint("0");
                 cpynum_bigint(num, (uint32_t)ftell(file));
@@ -253,22 +263,26 @@ extern BigInt *read_sm(FILE *file) {
                 fseek(file, index, SEEK_SET);
             }
             break;
+            // ret
             case RET_CODE: {
                 BigInt *num = pop_stack(stack).bigint;
                 fseek(file, getnum_bigint(num), SEEK_SET);
                 free_bigint(num);
             }
             break;
+            // stack
             case STACK_CODE: {
                 BigInt *num = new_bigint("0");
                 cpynum_bigint(num, (uint32_t)size_stack(stack));
                 push_stack(stack, num);
             }
             break;
+            // print
             case PRINT_CODE: {
                 println_bigint(get_stack(stack, size_stack(stack)-1).bigint);
             }
             break;
+            // hlt
             case HLT_CODE: {
                 goto close;
             }
