@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS=-Wall -std=c99
 
-FILES=main.c readsm.c extclib/extclib.o
+FILES=main.c readvm.c extclib/extclib.o
 
 .PHONY: default build run clean
 default: build run
