@@ -7,8 +7,8 @@ FILES=main.c readsm.c extclib/extclib.o
 default: build run
 
 build: $(FILES)
-	$(CC) $(CFLAGS) $(FILES) -o main -lgmp
+	$(CC) $(CFLAGS) $(FILES) -o main
 run: main
-	./main main.sm
+	./main
 clean:
 	rm -f main

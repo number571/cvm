@@ -4,7 +4,6 @@
 #include <stdint.h>
 #include <ctype.h>
 
-#include "extclib/bigint.h"
 #include "extclib/hashtab.h"
 #include "extclib/stack.h"
 
@@ -19,7 +18,7 @@
 | 6. stack, print, hlt, ;
 */
 
-typedef enum opcode_t {
+enum {
     PUSH_CODE,
     POP_CODE,
     LABEL_CODE,
@@ -41,7 +40,7 @@ typedef enum opcode_t {
     HLT_CODE,
     COMMENT_CODE,
     PASS_CODE, // code undefined
-} opcode_t;
+};
 
 const char *codes[OPERATOR_NUM] = {
     [PUSH_CODE]     = "push",
@@ -66,36 +65,211 @@ const char *codes[OPERATOR_NUM] = {
     [COMMENT_CODE]  = ";",
 };
 
-extern BigInt *open_sm(const char *filename);
-extern BigInt *read_sm(FILE *file);
+extern int32_t readvm_src(FILE *output, FILE *input);
+extern int32_t readvm_mch(FILE *input);
 
-static char *_readcode(char *line, FILE *file, opcode_t *code);
+static char *_readcode(char *line, FILE *file, uint8_t *code);
 static _Bool _strnull(char *str);
 static _Bool _isspace(char ch);
 
-extern BigInt *open_sm(const char *filename) {
-    FILE *file = fopen(filename, "r");
-    if (file == NULL) {
-        fprintf(stderr, "%s\n", "error: read file");
-        return NULL;
+static int32_t _join_8bits_to_32bits(uint8_t * bytes);
+static void _split_32bits_to_8bits(int32_t num, uint8_t * bytes);
+
+extern int32_t readvm_mch(FILE *input) {
+    fseek(input, 0, SEEK_END);
+    size_t fsize = ftell(input);
+
+    Stack *stack = new_stack(10000, DECIMAL_TYPE);
+    fseek(input, 0, SEEK_SET);
+
+    int32_t value = 0;
+    uint8_t code;
+
+    // read commands
+    while(!feof(input) && ftell(input) != fsize) {
+        fscanf(input, "%c", &code);
+
+        switch(code) {
+            // push x
+            case PUSH_CODE: {
+                uint8_t bytes[4];
+                fscanf(input, "%c%c%c%c", &bytes[0], &bytes[1], &bytes[2], &bytes[3]);
+                int32_t num = _join_8bits_to_32bits(bytes);
+                push_stack(stack, decimal(num));
+            }
+            break;
+            // pop
+            case POP_CODE: {
+                int32_t num = pop_stack(stack).decimal;
+                value = num;
+            }
+            break;
+            // [add|sub|mul|div]
+            case ADD_CODE: case SUB_CODE: case MUL_CODE: case DIV_CODE: {
+                int32_t x = pop_stack(stack).decimal;
+                int32_t y = pop_stack(stack).decimal;
+                switch(code) {
+                    case ADD_CODE:
+                        x += y;
+                    break;
+                    case SUB_CODE:
+                        x -= y;
+                    break;
+                    case MUL_CODE:
+                        x *= y;
+                    break;
+                    case DIV_CODE:
+                        x /= y;
+                    break;
+                    default: ;
+                }
+                push_stack(stack, decimal(x));
+            }
+            break;
+            case LABEL_CODE: {
+                uint8_t bytes[4];
+                fscanf(input, "%c%c%c%c", &bytes[0], &bytes[1], &bytes[2], &bytes[3]);
+                _join_8bits_to_32bits(bytes);
+            }
+            break;
+            // jmp label
+            case JMP_CODE: {
+                uint8_t bytes[4];
+                fscanf(input, "%c%c%c%c", &bytes[0], &bytes[1], &bytes[2], &bytes[3]);
+                int32_t index = _join_8bits_to_32bits(bytes);
+                fseek(input, index, SEEK_SET);
+            }
+            break;
+            // push x
+            // push y
+            // j[l|g|e|ne] label
+            case JL_CODE: case JG_CODE: case JE_CODE: case JNE_CODE: {
+                uint8_t bytes[4];
+                fscanf(input, "%c%c%c%c", &bytes[0], &bytes[1], &bytes[2], &bytes[3]);
+                int32_t index = _join_8bits_to_32bits(bytes);
+                int32_t x = pop_stack(stack).decimal;
+                int32_t y = pop_stack(stack).decimal;
+                switch(code) {
+                    case JL_CODE:
+                        if (x < y) {
+                            fseek(input, index, SEEK_SET);
+                        }
+                    break;
+                    case JG_CODE:
+                        if (x > y) {
+                            fseek(input, index, SEEK_SET);
+                        }
+                    break;
+                    case JE_CODE:
+                        if (x == y) {
+                            fseek(input, index, SEEK_SET);
+                        }
+                    break;
+                    case JNE_CODE:
+                        if (x != y) {
+                            fseek(input, index, SEEK_SET);
+                        }
+                    break;
+                    default: ;
+                }
+            }
+            break;
+            // store $x y
+            // store $x $y
+            // store $x $-y
+            // store $-x y
+            // store $-x $y
+            // store $-x $-y
+            case STORE_CODE: {
+                int32_t mem1, mem2;
+                uint8_t bytes[8];
+
+                fscanf(input, "%c%c%c%c%c%c%c%c", 
+                    &bytes[0], &bytes[1], &bytes[2], &bytes[3],
+                    &bytes[4], &bytes[5], &bytes[6], &bytes[7]);
+
+                mem1 = _join_8bits_to_32bits(bytes);
+                mem2 = _join_8bits_to_32bits(bytes+4);
+
+                if (mem1 < 0) {
+                    mem1 = size_stack(stack) + mem1;
+                }
+                if (mem2 < 0) {
+                    mem2 = size_stack(stack) + mem2;
+                }
+                // printf("%ld\n", size_stack(stack));
+                // printf("%d\n", mem1);
+                set_stack(stack, mem1, decimal(get_stack(stack, mem2).decimal));
+            }
+            break;
+            // load $x
+            // load $-x
+            case LOAD_CODE: {
+                uint8_t bytes[4];
+                fscanf(input, "%c%c%c%c", &bytes[0], &bytes[1], &bytes[2], &bytes[3]);
+                int32_t mem = _join_8bits_to_32bits(bytes);
+                if (mem < 0) {
+                    mem = size_stack(stack) + mem;
+                }
+                push_stack(stack, decimal(get_stack(stack, mem).decimal));
+            }
+            break;
+            // call label
+            case CALL_CODE: {
+                uint8_t bytes[4];
+                fscanf(input, "%c%c%c%c", &bytes[0], &bytes[1], &bytes[2], &bytes[3]);
+                int32_t index = _join_8bits_to_32bits(bytes);
+                // push callback current position for ret
+                int32_t currpos = ftell(input);
+                push_stack(stack, decimal(currpos));
+                // goto label
+                fseek(input, index, SEEK_SET);
+            }
+            break;
+            // ret
+            case RET_CODE: {
+                int32_t index = pop_stack(stack).decimal;
+                fseek(input, index, SEEK_SET);
+            }
+            break;
+            // stack
+            case STACK_CODE: {
+                int32_t num = size_stack(stack);
+                push_stack(stack, decimal(num));
+            }
+            break;
+            // print
+            case PRINT_CODE: {
+                printf("%d\n", get_stack(stack, size_stack(stack)-1).decimal);
+            }
+            break;
+            // hlt
+            case HLT_CODE: {
+                goto close;
+            }
+            break;
+        }
     }
-    BigInt *result = read_sm(file);
-    fclose(file);
-    return result;
+close:
+    free_stack(stack);
+    return value;
 }
 
-extern BigInt *read_sm(FILE *file) {
+extern int32_t readvm_src(FILE *output, FILE *input) {
     HashTab *hashtab = new_hashtab(250, STRING_TYPE, DECIMAL_TYPE);
     char buffer[BUFSIZ] = {0};
+
     size_t line_index = 0;
     _Bool err_exist = 0;
+    int32_t currpos = 0;
+
     char *line;
-    opcode_t code;
+    uint8_t code;
 
     // read labels, check syntax
-    while(fgets(buffer, BUFSIZ, file) != NULL) {
+    while(fgets(buffer, BUFSIZ, input) != NULL) {
         ++line_index;
-        line = _readcode(buffer, file, &code);
+        line = _readcode(buffer, input, &code);
         if((code == PASS_CODE && _strnull(line)) || code == COMMENT_CODE) {
             continue;
         }
@@ -104,65 +278,74 @@ extern BigInt *read_sm(FILE *file) {
             fprintf(stderr, "syntax error: line %ld\n", line_index);
         }
         switch(code) {
-            case LABEL_CODE:
-                set_hashtab(hashtab, string(line), decimal((int32_t)ftell(file)));
+            case PUSH_CODE: case JMP_CODE: case JL_CODE: case JG_CODE: case JE_CODE: case JNE_CODE:
+            case LOAD_CODE: case CALL_CODE: {
+                currpos += 5;
+            }
+            break;
+            case POP_CODE: case ADD_CODE: case SUB_CODE: case MUL_CODE: case DIV_CODE: case RET_CODE: 
+            case STACK_CODE: case PRINT_CODE: case HLT_CODE: {
+                currpos += 1;
+            }
+            break;
+            case STORE_CODE: {
+                currpos += 9;
+            }
+            break;
+            case LABEL_CODE: {
+                currpos += 5;
+                set_hashtab(hashtab, string(line), decimal(currpos));
+            }
             break;
             default: ;
         }
     }
     if (err_exist) {
         free_hashtab(hashtab);
-        return NULL;
+        return -1;
     }
 
-    Stack *stack = new_stack(10000, BIGINT_TYPE);
-    BigInt *value = new_bigint("0");
-    fseek(file, 0, SEEK_SET);
+    Stack *stack = new_stack(10000, DECIMAL_TYPE);
+    int32_t value = 0;
+    fseek(input, 0, SEEK_SET);
 
     // read commands
-    while(fgets(buffer, BUFSIZ, file) != NULL) {
-        line = _readcode(buffer, file, &code);
+    while(fgets(buffer, BUFSIZ, input) != NULL) {
+        line = _readcode(buffer, input, &code);
+
         switch(code) {
             // push x
             case PUSH_CODE: {
-                BigInt *num = new_bigint(line);
-                push_stack(stack, num);
+                int32_t num = atoi(line);
+                uint8_t bytes[4];
+                _split_32bits_to_8bits(num, bytes);
+                fprintf(output, "%c%c%c%c%c", code, bytes[0], bytes[1], bytes[2], bytes[3]);
             }
             break;
             // pop
             case POP_CODE: {
-                BigInt *num = pop_stack(stack).bigint;
-                cpy_bigint(value, num);
-                free_bigint(num);
+                fprintf(output, "%c", code);
             }
             break;
             // [add|sub|mul|div]
             case ADD_CODE: case SUB_CODE: case MUL_CODE: case DIV_CODE: {
-                BigInt *x = pop_stack(stack).bigint;
-                BigInt *y = pop_stack(stack).bigint;
-                switch(code) {
-                    case ADD_CODE:
-                        add_bigint(x, x, y);
-                    break;
-                    case SUB_CODE:
-                        sub_bigint(x, x, y);
-                    break;
-                    case MUL_CODE:
-                        mul_bigint(x, x, y);
-                    break;
-                    case DIV_CODE:
-                        div_bigint(x, x, y);
-                    break;
-                    default: ;
-                }
-                push_stack(stack, x);
-                free_bigint(y);
+                fprintf(output, "%c", code);
+            }
+            break;
+            // label x
+            case LABEL_CODE: {
+                int32_t index = ftell(output);
+                uint8_t bytes[4];
+                _split_32bits_to_8bits(index, bytes);
+                fprintf(output, "%c%c%c%c%c", code, bytes[0], bytes[1], bytes[2], bytes[3]);
             }
             break;
             // jmp label
             case JMP_CODE: {
                 int32_t index = get_hashtab(hashtab, line).decimal;
-                fseek(file, index, SEEK_SET);
+                uint8_t bytes[4];
+                _split_32bits_to_8bits(index, bytes);
+                fprintf(output, "%c%c%c%c%c", code, bytes[0], bytes[1], bytes[2], bytes[3]);
             }
             break;
             // push x
@@ -170,39 +353,13 @@ extern BigInt *read_sm(FILE *file) {
             // j[l|g|e|ne] label
             case JL_CODE: case JG_CODE: case JE_CODE: case JNE_CODE: {
                 int32_t index = get_hashtab(hashtab, line).decimal;
-                BigInt *x = pop_stack(stack).bigint;
-                BigInt *y = pop_stack(stack).bigint;
-                switch(code) {
-                    case JL_CODE:
-                        if (cmp_bigint(x, y) < 0) {
-                            fseek(file, index, SEEK_SET);
-                        }
-                    break;
-                    case JG_CODE:
-                        if (cmp_bigint(x, y) > 0) {
-                            fseek(file, index, SEEK_SET);
-                        }
-                    break;
-                    case JE_CODE:
-                        if (cmp_bigint(x, y) == 0) {
-                            fseek(file, index, SEEK_SET);
-                        }
-                    break;
-                    case JNE_CODE:
-                        if (cmp_bigint(x, y) != 0) {
-                            fseek(file, index, SEEK_SET);
-                        }
-                    break;
-                    default: ;
-                }
-                free_bigint(y);
-                free_bigint(x);
+                uint8_t bytes[4];
+                _split_32bits_to_8bits(index, bytes);
+                fprintf(output, "%c%c%c%c%c", code, bytes[0], bytes[1], bytes[2], bytes[3]);
             }
             break;
-            // store $x y
             // store $x $y
             // store $x $-y
-            // store $-x y
             // store $-x $y
             // store $-x $-y
             case STORE_CODE:
@@ -216,87 +373,63 @@ extern BigInt *read_sm(FILE *file) {
                         ++ptr;
                     }
                     *ptr = '\0';
-                    size_t index = 0;
+                    int32_t index = 0;
                     if (line[1] == '-') {
-                        index = size_stack(stack) - atoi(line+2);
+                        index = -atoi(line+2);
                     } else {
                         index = atoi(line+1);
                     }
-                    BigInt *x = get_stack(stack, index).bigint;
-                    if (arg[0] == '$') {
-                        size_t i2 = 0;
-                        if (arg[1] == '-') {
-                            i2 = size_stack(stack) - atoi(arg+2);
-                        } else {
-                            i2 = (int32_t)atoi(arg+1);
-                        }
-                        BigInt *num = dup_bigint(get_stack(stack, i2).bigint);
-                        set_stack(stack, index, num);
-                        free_bigint(x);
-                        break;
+                    int32_t i2 = 0;
+                    if (arg[1] == '-') {
+                        i2 = -atoi(arg+2);
+                    } else {
+                        i2 = atoi(arg+1);
                     }
-                    BigInt *num = new_bigint(arg);
-                    set_stack(stack, index, num);
-                    free_bigint(x);
+                    uint8_t bytes[8];
+                    _split_32bits_to_8bits(index, bytes);
+                    _split_32bits_to_8bits(i2, bytes+4);
+
+                    fprintf(output, "%c%c%c%c%c%c%c%c%c", code, 
+                        bytes[0], bytes[1], bytes[2], bytes[3], 
+                        bytes[4], bytes[5], bytes[6], bytes[7]);
                 }
             break;
             // load $x
             // load $-x
             case LOAD_CODE:
                 if (line[0] == '$') {
-                    size_t index = 0;
+                    int32_t index = 0;
                     if (line[1] == '-') {
-                        index = size_stack(stack) - atoi(line+2);
+                        index = -atoi(line+2);
                     } else {
                         index = atoi(line+1);
                     }
-                    BigInt *num = dup_bigint(get_stack(stack, index).bigint);
-                    push_stack(stack, num);
+                    uint8_t bytes[4];
+                    _split_32bits_to_8bits(index, bytes);
+                    fprintf(output, "%c%c%c%c%c", code, bytes[0], bytes[1], bytes[2], bytes[3]);
                 }
             break;
             // call label
             case CALL_CODE: {
-                BigInt *num = new_bigint("0");
-                cpynum_bigint(num, (uint32_t)ftell(file));
-                push_stack(stack, num);
                 int32_t index = get_hashtab(hashtab, line).decimal;
-                fseek(file, index, SEEK_SET);
+                uint8_t bytes[4];
+                _split_32bits_to_8bits(index, bytes);
+                fprintf(output, "%c%c%c%c%c", code, bytes[0], bytes[1], bytes[2], bytes[3]);
             }
             break;
             // ret
-            case RET_CODE: {
-                BigInt *num = pop_stack(stack).bigint;
-                fseek(file, getnum_bigint(num), SEEK_SET);
-                free_bigint(num);
+            case RET_CODE: case STACK_CODE: case PRINT_CODE: case HLT_CODE: {
+                fprintf(output, "%c", code);
             }
-            break;
-            // stack
-            case STACK_CODE: {
-                BigInt *num = new_bigint("0");
-                cpynum_bigint(num, (uint32_t)size_stack(stack));
-                push_stack(stack, num);
-            }
-            break;
-            // print
-            case PRINT_CODE: {
-                println_bigint(get_stack(stack, size_stack(stack)-1).bigint);
-            }
-            break;
-            // hlt
-            case HLT_CODE: {
-                goto close;
-            }
-            break;
             default: ;
         }
     }
-close:
     free_stack(stack);
     free_hashtab(hashtab);
     return value;
 }
 
-static char *_readcode(char *line, FILE *file, opcode_t *code) {
+static char *_readcode(char *line, FILE *file, uint8_t *code) {
     // pass spaces
     char *ptr = line;
     while(isspace(*ptr)) {
@@ -347,6 +480,20 @@ static char *_readcode(char *line, FILE *file, opcode_t *code) {
 
     // return first argument
     return line;
+}
+
+static int32_t _join_8bits_to_32bits(uint8_t * bytes) {
+    uint64_t num;
+    for (uint8_t *p = bytes; p < bytes + 4; ++p) {
+        num = (num << 8) | *p;
+    }
+    return num;
+}
+
+static void _split_32bits_to_8bits(int32_t num, uint8_t * bytes) {
+    for (uint8_t i = 0; i < 4; ++i) {
+        bytes[i] = (uint8_t)(num >> (24 - i * 8));
+    }
 }
 
 static _Bool _strnull(char *str) {
