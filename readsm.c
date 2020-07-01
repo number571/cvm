@@ -7,75 +7,71 @@
 #include "extclib/hashtab.h"
 #include "extclib/stack.h"
 
-#define OPERATOR_NUM 20
+#define OPERATION_NUM 18
 /*
-| Operators:
+| Operations:
 | 1. push, pop
 | 2. add, sub, mul, div
 | 3. jmp, je, jne, jl, jg
 | 4. load, store
 | 5. label, call, ret
-| 6. stack, print, hlt, ;
+| 6. hlt, ;
 */
 
 enum {
     PUSH_CODE,
     POP_CODE,
-    LABEL_CODE,
+    ADD_CODE,
+    SUB_CODE,
+    MUL_CODE,
+    DIV_CODE,
     JMP_CODE,
     JL_CODE,
     JG_CODE,
     JE_CODE,
     JNE_CODE,
-    ADD_CODE,
-    SUB_CODE,
-    MUL_CODE,
-    DIV_CODE,
     STORE_CODE,
     LOAD_CODE,
     CALL_CODE,
     RET_CODE,
-    STACK_CODE,
-    PRINT_CODE,
     HLT_CODE,
+    LABEL_CODE,
     COMMENT_CODE,
     PASS_CODE, // code undefined
 };
 
-const char *codes[OPERATOR_NUM] = {
+const char *opcodelist[OPERATION_NUM] = {
     [PUSH_CODE]     = "push",
     [POP_CODE]      = "pop",
-    [LABEL_CODE]    = "label",
+    [ADD_CODE]      = "add",
+    [SUB_CODE]      = "sub",
+    [MUL_CODE]      = "mul",
+    [DIV_CODE]      = "div",
     [JMP_CODE]      = "jmp",
     [JL_CODE]       = "jl",
     [JG_CODE]       = "jg",
     [JE_CODE]       = "je",
     [JNE_CODE]      = "jne",
-    [ADD_CODE]      = "add",
-    [SUB_CODE]      = "sub",
-    [MUL_CODE]      = "mul",
-    [DIV_CODE]      = "div",
     [STORE_CODE]    = "store",
     [LOAD_CODE]     = "load",
     [CALL_CODE]     = "call",
     [RET_CODE]      = "ret",
-    [STACK_CODE]    = "stack",
-    [PRINT_CODE]    = "print",
     [HLT_CODE]      = "hlt",
+    [LABEL_CODE]    = "label",
     [COMMENT_CODE]  = ";",
 };
 
 extern int32_t readvm_src(FILE *output, FILE *input);
-extern int32_t readvm_mch(FILE *input);
+extern int32_t readvm_exc(FILE *input);
 
-static char *_readcode(char *line, FILE *file, uint8_t *code);
+static char *_readcode(char *line, FILE *file, uint8_t *opcode);
 static _Bool _strnull(char *str);
 static _Bool _isspace(char ch);
 
 static int32_t _join_8bits_to_32bits(uint8_t * bytes);
 static void _split_32bits_to_8bits(int32_t num, uint8_t * bytes);
 
-extern int32_t readvm_mch(FILE *input) {
+extern int32_t readvm_exc(FILE *input) {
     fseek(input, 0, SEEK_END);
     size_t fsize = ftell(input);
 
@@ -83,13 +79,13 @@ extern int32_t readvm_mch(FILE *input) {
     fseek(input, 0, SEEK_SET);
 
     int32_t value = 0;
-    uint8_t code;
+    uint8_t opcode;
 
     // read commands
     while(!feof(input) && ftell(input) != fsize) {
-        fscanf(input, "%c", &code);
+        fscanf(input, "%c", &opcode);
 
-        switch(code) {
+        switch(opcode) {
             // push x
             case PUSH_CODE: {
                 uint8_t bytes[4];
@@ -108,7 +104,7 @@ extern int32_t readvm_mch(FILE *input) {
             case ADD_CODE: case SUB_CODE: case MUL_CODE: case DIV_CODE: {
                 int32_t x = pop_stack(stack).decimal;
                 int32_t y = pop_stack(stack).decimal;
-                switch(code) {
+                switch(opcode) {
                     case ADD_CODE:
                         x += y;
                     break;
@@ -143,7 +139,7 @@ extern int32_t readvm_mch(FILE *input) {
                 int32_t index = _join_8bits_to_32bits(bytes);
                 int32_t x = pop_stack(stack).decimal;
                 int32_t y = pop_stack(stack).decimal;
-                switch(code) {
+                switch(opcode) {
                     case JL_CODE:
                         if (x < y) {
                             fseek(input, index, SEEK_SET);
@@ -226,17 +222,6 @@ extern int32_t readvm_mch(FILE *input) {
                 fseek(input, index, SEEK_SET);
             }
             break;
-            // stack
-            case STACK_CODE: {
-                int32_t num = size_stack(stack);
-                push_stack(stack, decimal(num));
-            }
-            break;
-            // print
-            case PRINT_CODE: {
-                printf("%d\n", get_stack(stack, size_stack(stack)-1).decimal);
-            }
-            break;
             // hlt
             case HLT_CODE: {
                 goto close;
@@ -258,27 +243,27 @@ extern int32_t readvm_src(FILE *output, FILE *input) {
     int32_t currpos = 0;
 
     char *line;
-    uint8_t code;
+    uint8_t opcode;
 
     // read labels, check syntax
     while(fgets(buffer, BUFSIZ, input) != NULL) {
         ++line_index;
-        line = _readcode(buffer, input, &code);
-        if((code == PASS_CODE && _strnull(line)) || code == COMMENT_CODE) {
+        line = _readcode(buffer, input, &opcode);
+        if((opcode == PASS_CODE && _strnull(line)) || opcode == COMMENT_CODE) {
             continue;
         }
-        if (code == PASS_CODE) {
+        if (opcode == PASS_CODE) {
             err_exist = 1;
             fprintf(stderr, "syntax error: line %ld\n", line_index);
         }
-        switch(code) {
-            case PUSH_CODE: case JMP_CODE: case JL_CODE: case JG_CODE: case JE_CODE: case JNE_CODE:
-            case LOAD_CODE: case CALL_CODE: {
+        switch(opcode) {
+            case PUSH_CODE: case JMP_CODE: case JL_CODE: case JG_CODE: case JE_CODE: 
+            case JNE_CODE: case LOAD_CODE: case CALL_CODE: {
                 currpos += 5;
             }
             break;
-            case POP_CODE: case ADD_CODE: case SUB_CODE: case MUL_CODE: case DIV_CODE: case RET_CODE: 
-            case STACK_CODE: case PRINT_CODE: case HLT_CODE: {
+            case POP_CODE: case ADD_CODE: case SUB_CODE: case MUL_CODE: case DIV_CODE: 
+            case RET_CODE: case HLT_CODE: {
                 currpos += 1;
             }
             break;
@@ -304,25 +289,25 @@ extern int32_t readvm_src(FILE *output, FILE *input) {
 
     // read commands
     while(fgets(buffer, BUFSIZ, input) != NULL) {
-        line = _readcode(buffer, input, &code);
+        line = _readcode(buffer, input, &opcode);
 
-        switch(code) {
+        switch(opcode) {
             // push x
             case PUSH_CODE: {
                 int32_t num = atoi(line);
                 uint8_t bytes[4];
                 _split_32bits_to_8bits(num, bytes);
-                fprintf(output, "%c%c%c%c%c", code, bytes[0], bytes[1], bytes[2], bytes[3]);
+                fprintf(output, "%c%c%c%c%c", opcode, bytes[0], bytes[1], bytes[2], bytes[3]);
             }
             break;
             // pop
             case POP_CODE: {
-                fprintf(output, "%c", code);
+                fprintf(output, "%c", opcode);
             }
             break;
             // [add|sub|mul|div]
             case ADD_CODE: case SUB_CODE: case MUL_CODE: case DIV_CODE: {
-                fprintf(output, "%c", code);
+                fprintf(output, "%c", opcode);
             }
             break;
             // jmp label
@@ -330,7 +315,7 @@ extern int32_t readvm_src(FILE *output, FILE *input) {
                 int32_t index = get_hashtab(hashtab, line).decimal;
                 uint8_t bytes[4];
                 _split_32bits_to_8bits(index, bytes);
-                fprintf(output, "%c%c%c%c%c", code, bytes[0], bytes[1], bytes[2], bytes[3]);
+                fprintf(output, "%c%c%c%c%c", opcode, bytes[0], bytes[1], bytes[2], bytes[3]);
             }
             break;
             // push x
@@ -340,7 +325,7 @@ extern int32_t readvm_src(FILE *output, FILE *input) {
                 int32_t index = get_hashtab(hashtab, line).decimal;
                 uint8_t bytes[4];
                 _split_32bits_to_8bits(index, bytes);
-                fprintf(output, "%c%c%c%c%c", code, bytes[0], bytes[1], bytes[2], bytes[3]);
+                fprintf(output, "%c%c%c%c%c", opcode, bytes[0], bytes[1], bytes[2], bytes[3]);
             }
             break;
             // store $x $y
@@ -374,7 +359,7 @@ extern int32_t readvm_src(FILE *output, FILE *input) {
                     _split_32bits_to_8bits(index, bytes);
                     _split_32bits_to_8bits(i2, bytes+4);
 
-                    fprintf(output, "%c%c%c%c%c%c%c%c%c", code, 
+                    fprintf(output, "%c%c%c%c%c%c%c%c%c", opcode, 
                         bytes[0], bytes[1], bytes[2], bytes[3], 
                         bytes[4], bytes[5], bytes[6], bytes[7]);
                 }
@@ -391,7 +376,7 @@ extern int32_t readvm_src(FILE *output, FILE *input) {
                     }
                     uint8_t bytes[4];
                     _split_32bits_to_8bits(index, bytes);
-                    fprintf(output, "%c%c%c%c%c", code, bytes[0], bytes[1], bytes[2], bytes[3]);
+                    fprintf(output, "%c%c%c%c%c", opcode, bytes[0], bytes[1], bytes[2], bytes[3]);
                 }
             break;
             // call label
@@ -399,12 +384,12 @@ extern int32_t readvm_src(FILE *output, FILE *input) {
                 int32_t index = get_hashtab(hashtab, line).decimal;
                 uint8_t bytes[4];
                 _split_32bits_to_8bits(index, bytes);
-                fprintf(output, "%c%c%c%c%c", code, bytes[0], bytes[1], bytes[2], bytes[3]);
+                fprintf(output, "%c%c%c%c%c", opcode, bytes[0], bytes[1], bytes[2], bytes[3]);
             }
             break;
             // ret
-            case RET_CODE: case STACK_CODE: case PRINT_CODE: case HLT_CODE: {
-                fprintf(output, "%c", code);
+            case RET_CODE: case HLT_CODE: {
+                fprintf(output, "%c", opcode);
             }
             default: ;
         }
@@ -414,7 +399,7 @@ extern int32_t readvm_src(FILE *output, FILE *input) {
     return value;
 }
 
-static char *_readcode(char *line, FILE *file, uint8_t *code) {
+static char *_readcode(char *line, FILE *file, uint8_t *opcode) {
     // pass spaces
     char *ptr = line;
     while(isspace(*ptr)) {
@@ -429,22 +414,20 @@ static char *_readcode(char *line, FILE *file, uint8_t *code) {
     *ptr = '\0';
 
     // analyze operator
-    *code = PASS_CODE;
-    for (size_t i = 0; i < OPERATOR_NUM; ++i) {
-        if (strcmp(line, codes[i]) == 0) {
-            *code = i;
+    *opcode = PASS_CODE;
+    for (size_t i = 0; i < OPERATION_NUM; ++i) {
+        if (strcmp(line, opcodelist[i]) == 0) {
+            *opcode = i;
             break;
         }
     }
 
     // operators without args
-    switch(*code) {
+    switch(*opcode) {
         case PASS_CODE:
         case POP_CODE:
         case COMMENT_CODE:
         case RET_CODE:
-        case PRINT_CODE:
-        case STACK_CODE:
         case HLT_CODE:
             return line;
         default: ;

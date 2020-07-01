@@ -2,24 +2,24 @@
 #include <stdint.h>
 
 extern int32_t readvm_src(FILE *output, FILE *input);
-extern int32_t readvm_mch(FILE *input);
+extern int32_t readvm_exc(FILE *input);
 
-int32_t run_mch(const char *inputf);
+int32_t runvm_exc(const char *inputf);
 int8_t compilevm_src(const char *outputf, const char *inputf);
 
 int main(int argc, char const *argv[]) {
-    compilevm_src("main.vmm", "main.vms");
-    printf("%d\n", run_mch("main.vmm"));
+    compilevm_src("main.vme", "main.vms");
+    printf("%d\n", runvm_exc("main.vme"));
     return 0;
 }
 
-int32_t run_mch(const char *inputf) {
+int32_t runvm_exc(const char *inputf) {
     FILE *input = fopen(inputf, "r");
     if (input == NULL) {
         fprintf(stderr, "%s\n", "error: read input file");
         return 1;
     }
-    int32_t res = readvm_mch(input);
+    int32_t res = readvm_exc(input);
     fclose(input);
     return res;
 }
