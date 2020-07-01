@@ -1,31 +1,32 @@
 # VirtualMachine
 > Stack-based virtual machine.
 
-### Operations (num = 18)
-1.  push  [0x00]
-2.  pop   [0x01]
-3.  add   [0x02]
-4.  sub   [0x03]
-5.  mul   [0x04]
-6.  div   [0x05]
-7.  jmp   [0x06]
-8.  jl    [0x07]
-9.  jg    [0x08]
-10. je    [0x09]
-11. jne   [0x0A]
-12. store [0x0B]
-13. load  [0x0C]
-14. call  [0x0D]
-15. ret   [0x0E]
-16. hlt   [0x0F]
-17. label [none]
-18. ;     [none]
+### Instructions (num = 16)
+1.  [0x00] push  
+2.  [0x01] pop   
+3.  [0x02] add   
+4.  [0x03] sub   
+5.  [0x04] mul   
+6.  [0x05] div   
+7.  [0x06] jmp   
+8.  [0x07] jl    
+9.  [0x08] jg    
+10. [0x09] je    
+11. [0x0A] jne   
+12. [0x0B] store 
+13. [0x0C] load  
+14. [0x0D] call  
+15. [0x0E] ret   
+16. [0x0F] hlt   
 
+### Pseudo instructions (num = 2)
+1. label
+2. ;
 
 ### Interface functions
 ```c
 // translate source file (input) into executable (output)
-extern int32_t readvm_src(FILE *output, FILE *input);
+extern int8_t readvm_src(FILE *output, FILE *input);
 // run executable file
 extern int32_t readvm_exc(FILE *input);
 ```

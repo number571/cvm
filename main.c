@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 
-extern int32_t readvm_src(FILE *output, FILE *input);
+extern int8_t readvm_src(FILE *output, FILE *input);
 extern int32_t readvm_exc(FILE *input);
 
 int32_t runvm_exc(const char *inputf);

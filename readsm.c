@@ -7,9 +7,9 @@
 #include "extclib/hashtab.h"
 #include "extclib/stack.h"
 
-#define OPERATION_NUM 18
+#define INSTRUCTION_NUM 18
 /*
-| Operations:
+| Instructions:
 | 1. push, pop
 | 2. add, sub, mul, div
 | 3. jmp, je, jne, jl, jg
@@ -40,7 +40,7 @@ enum {
     PASS_CODE, // code undefined
 };
 
-const char *opcodelist[OPERATION_NUM] = {
+const char *opcodelist[INSTRUCTION_NUM] = {
     [PUSH_CODE]     = "push",
     [POP_CODE]      = "pop",
     [ADD_CODE]      = "add",
@@ -61,7 +61,7 @@ const char *opcodelist[OPERATION_NUM] = {
     [COMMENT_CODE]  = ";",
 };
 
-extern int32_t readvm_src(FILE *output, FILE *input);
+extern int8_t readvm_src(FILE *output, FILE *input);
 extern int32_t readvm_exc(FILE *input);
 
 static char *_readcode(char *line, FILE *file, uint8_t *opcode);
@@ -234,7 +234,7 @@ close:
     return value;
 }
 
-extern int32_t readvm_src(FILE *output, FILE *input) {
+extern int8_t readvm_src(FILE *output, FILE *input) {
     HashTab *hashtab = new_hashtab(250, STRING_TYPE, DECIMAL_TYPE);
     char buffer[BUFSIZ] = {0};
 
@@ -280,11 +280,10 @@ extern int32_t readvm_src(FILE *output, FILE *input) {
     }
     if (err_exist) {
         free_hashtab(hashtab);
-        return -1;
+        return 1;
     }
 
     Stack *stack = new_stack(10000, DECIMAL_TYPE);
-    int32_t value = 0;
     fseek(input, 0, SEEK_SET);
 
     // read commands
@@ -396,7 +395,7 @@ extern int32_t readvm_src(FILE *output, FILE *input) {
     }
     free_stack(stack);
     free_hashtab(hashtab);
-    return value;
+    return 0;
 }
 
 static char *_readcode(char *line, FILE *file, uint8_t *opcode) {
@@ -415,7 +414,7 @@ static char *_readcode(char *line, FILE *file, uint8_t *opcode) {
 
     // analyze operator
     *opcode = PASS_CODE;
-    for (size_t i = 0; i < OPERATION_NUM; ++i) {
+    for (size_t i = 0; i < INSTRUCTION_NUM; ++i) {
         if (strcmp(line, opcodelist[i]) == 0) {
             *opcode = i;
             break;
