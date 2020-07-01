@@ -126,12 +126,6 @@ extern int32_t readvm_mch(FILE *input) {
                 push_stack(stack, decimal(x));
             }
             break;
-            case LABEL_CODE: {
-                uint8_t bytes[4];
-                fscanf(input, "%c%c%c%c", &bytes[0], &bytes[1], &bytes[2], &bytes[3]);
-                _join_8bits_to_32bits(bytes);
-            }
-            break;
             // jmp label
             case JMP_CODE: {
                 uint8_t bytes[4];
@@ -293,7 +287,6 @@ extern int32_t readvm_src(FILE *output, FILE *input) {
             }
             break;
             case LABEL_CODE: {
-                currpos += 5;
                 set_hashtab(hashtab, string(line), decimal(currpos));
             }
             break;
@@ -330,14 +323,6 @@ extern int32_t readvm_src(FILE *output, FILE *input) {
             // [add|sub|mul|div]
             case ADD_CODE: case SUB_CODE: case MUL_CODE: case DIV_CODE: {
                 fprintf(output, "%c", code);
-            }
-            break;
-            // label x
-            case LABEL_CODE: {
-                int32_t index = ftell(output);
-                uint8_t bytes[4];
-                _split_32bits_to_8bits(index, bytes);
-                fprintf(output, "%c%c%c%c%c", code, bytes[0], bytes[1], bytes[2], bytes[3]);
             }
             break;
             // jmp label
