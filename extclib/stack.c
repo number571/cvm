@@ -1,7 +1,7 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
 #include <string.h>
+#include <stdint.h>
+#include <stdlib.h>
 
 #include "type.h"
 #include "stack.h"
@@ -17,19 +17,18 @@ static void _insert_stack(Stack *stack, size_t index, void *value);
 static void _free_stack(Stack *stack);
 
 extern Stack *new_stack(size_t size, vtype_t tvalue) {
-    switch(tvalue){
-        case DECIMAL_TYPE: 
-        case REAL_TYPE: 
-        case STRING_TYPE:
-            break;
+    switch(tvalue) {
+        case DECIMAL_TYPE: case REAL_TYPE: case STRING_TYPE:
+        break;
         default:
-            fprintf(stderr, "%s\n", "tvalue type not supported");
+            fprintf(stderr, "%s\n", "tvalue type not found");
             return NULL;
     }
     Stack *stack = (Stack*)malloc(sizeof(Stack));
+    stack->tvalue = tvalue;
     stack->buffer = (value_t*)malloc(sizeof(value_t)*size);
     stack->size = size;
-    stack->tvalue = tvalue;
+    stack->index = 0;
     return stack;
 }
 
@@ -39,8 +38,17 @@ extern void free_stack(Stack *stack) {
     free(stack);
 }
 
+extern size_t size_stack(Stack *stack) {
+    return stack->index;
+}
+
 extern void set_stack(Stack *stack, size_t index, void *value) {
     _insert_stack(stack, index, value);
+}
+
+extern void push_stack(Stack *stack, void *value) {
+    _insert_stack(stack, stack->index, value);
+    stack->index += 1;
 }
 
 extern value_t get_stack(Stack *stack, size_t index) {
@@ -54,20 +62,11 @@ extern value_t get_stack(Stack *stack, size_t index) {
     return stack->buffer[index];
 }
 
-extern size_t size_stack(Stack *stack) {
-    return stack->index;
-}
-
-extern void push_stack(Stack *stack, void *value) {
-    _insert_stack(stack, stack->index, value);
-    stack->index += 1;
-}
-
 extern value_t pop_stack(Stack *stack) {
     if (stack->index == 0) {
         fprintf(stderr, "%s\n", "error: stack overflow");
-        value_t none = { 
-            .decimal = 0, 
+        value_t none = {
+            .decimal = 0,
         };
         return none;
     }
@@ -77,7 +76,7 @@ extern value_t pop_stack(Stack *stack) {
 
 static void _insert_stack(Stack *stack, size_t index, void *value) {
     if (index >= stack->size) {
-        fprintf(stderr, "%s\n", "error: stack overflow");
+        fprintf(stderr, "%s\n", "error: index >= stack size");
         return;
     }
     switch(stack->tvalue) {
