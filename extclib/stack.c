@@ -13,7 +13,7 @@ typedef struct Stack {
     size_t index;
 } Stack;
 
-static void _insert_stack(Stack *stack, size_t index, void *value);
+static int8_t _insert_stack(Stack *stack, size_t index, void *value);
 static void _free_stack(Stack *stack);
 
 extern Stack *new_stack(size_t size, vtype_t tvalue) {
@@ -47,7 +47,9 @@ extern void set_stack(Stack *stack, size_t index, void *value) {
 }
 
 extern void push_stack(Stack *stack, void *value) {
-    _insert_stack(stack, stack->index, value);
+    if (_insert_stack(stack, stack->index, value) != 0) {
+        return;
+    }
     stack->index += 1;
 }
 
@@ -74,10 +76,10 @@ extern value_t pop_stack(Stack *stack) {
     return stack->buffer[stack->index];
 }
 
-static void _insert_stack(Stack *stack, size_t index, void *value) {
+static int8_t _insert_stack(Stack *stack, size_t index, void *value) {
     if (index >= stack->size) {
         fprintf(stderr, "%s\n", "error: index >= stack size");
-        return;
+        return 1;
     }
     switch(stack->tvalue) {
         case DECIMAL_TYPE:
@@ -95,6 +97,7 @@ static void _insert_stack(Stack *stack, size_t index, void *value) {
         break;
         default: ;
     }
+    return 0;
 }
 
 static void _free_stack(Stack *stack) {
