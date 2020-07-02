@@ -31,7 +31,7 @@ int8_t compilevm_src(const char *outputf, const char *inputf) {
         return -1;
     }
     FILE *output = fopen(outputf, "wb");
-    if (input == NULL) {
+    if (output == NULL) {
         fprintf(stderr, "%s\n", "error: file output open");
         return -1;
     }
