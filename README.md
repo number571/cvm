@@ -2,26 +2,26 @@
 > Stack-based virtual machine.
 
 ### Instructions (num = 16)
-1.  [0x00] push  
-2.  [0x01] pop   
-3.  [0x02] add   
-4.  [0x03] sub   
-5.  [0x04] mul   
-6.  [0x05] div   
-7.  [0x06] jmp   
-8.  [0x07] jl    
-9.  [0x08] jg    
-10. [0x09] je    
-11. [0x0A] jne   
-12. [0x0B] store 
-13. [0x0C] load  
-14. [0x0D] call  
-15. [0x0E] ret   
-16. [0x0F] hlt   
+1.  [0x00] "push"  
+2.  [0x01] "pop"   
+3.  [0x02] "add"   
+4.  [0x03] "sub"   
+5.  [0x04] "mul"   
+6.  [0x05] "div"   
+7.  [0x06] "jmp"   
+8.  [0x07] "jl"    
+9.  [0x08] "jg"    
+10. [0x09] "je"    
+11. [0x0A] "jne"   
+12. [0x0B] "store" 
+13. [0x0C] "load"  
+14. [0x0D] "call"  
+15. [0x0E] "ret"   
+16. [0x0F] "hlt"   
 
 ### Pseudo instructions (num = 2)
-1. label
-2. ;
+1. "label"
+2. ";"
 
 ### Interface functions
 ```c
