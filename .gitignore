@@ -1,2 +1,2 @@
-main
-extclib/*.o
+cvm
+*.o
