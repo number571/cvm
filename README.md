@@ -46,24 +46,22 @@ label begin
     push 10
     call fact
     jmp end
-
 label end
     ; A
     pop
     hlt
-
 ; A <- fact(A)
 label fact
     ; B <- A
     load $-2
     ; if B < 2
+    load $-1
     push 2
-    load $-2
     jl _clfact
 label _fact
     ; B <- B - 1
+    load $-1
     push 1
-    load $-2
     sub
     store $-2 $-1
     pop
@@ -74,8 +72,8 @@ label _fact
     store $-4 $-1
     pop
     ; if B > 1
+    load $-1
     push 1
-    load $-2
     jg _fact
 label _clfact
     ; return
@@ -86,9 +84,9 @@ label _clfact
 ### Example (Factorial [Executable])
 ```
 0000 0000 0a0d 0000 0011 0600 0000 0f01
-0f0c ffff fffe 0000 0000 020c ffff fffe
-0700 0000 5e00 0000 0001 0cff ffff fe03
+0f0c ffff fffe 0cff ffff ff00 0000 0002
+0700 0000 5e0c ffff ffff 0000 0000 0103
 0bff ffff feff ffff ff01 0cff ffff fd0c
-ffff fffe 040b ffff fffc ffff ffff 0100
-0000 0001 0cff ffff fe08 0000 0025 010e
+ffff fffe 040b ffff fffc ffff ffff 010c
+ffff ffff 0000 0000 0108 0000 0025 010e
 ```

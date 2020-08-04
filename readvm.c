@@ -31,24 +31,24 @@ enum {
 	PASS_CODE,
 };
 
-const char *opcodelist[INSTRUCTION_NUM] = {
-	[PUSH_CODE] = "push",
-	[POP_CODE] = "pop",
-	[ADD_CODE] = "add",
-	[SUB_CODE] = "sub",
-	[MUL_CODE] = "mul",
-	[DIV_CODE] = "div",
-	[JMP_CODE] = "jmp",
-	[JL_CODE] = "jl",
-	[JG_CODE] = "jg",
-	[JE_CODE] = "je",
-	[JNE_CODE] = "jne",
-	[STORE_CODE] = "store",
-	[LOAD_CODE] = "load",
-	[CALL_CODE] = "call",
-	[RET_CODE] = "ret",
-	[HLT_CODE] = "hlt",
-	[LABEL_CODE] = "label",
+static const char *opcodelist[INSTRUCTION_NUM] = {
+	[PUSH_CODE]    = "push",
+	[POP_CODE]     = "pop",
+	[ADD_CODE]     = "add",
+	[SUB_CODE]     = "sub",
+	[MUL_CODE]     = "mul",
+	[DIV_CODE]     = "div",
+	[JMP_CODE]     = "jmp",
+	[JL_CODE]      = "jl",
+	[JG_CODE]      = "jg",
+	[JE_CODE]      = "je",
+	[JNE_CODE]     = "jne",
+	[STORE_CODE]   = "store",
+	[LOAD_CODE]    = "load",
+	[CALL_CODE]    = "call",
+	[RET_CODE]     = "ret",
+	[HLT_CODE]     = "hlt",
+	[LABEL_CODE]   = "label",
 	[COMMENT_CODE] = ";",
 };
 
@@ -91,20 +91,20 @@ extern int32_t readvm_exc(FILE *input) {
 				int32_t y = pop_stack(stack).decimal;
 				switch(opcode) {
 					case ADD_CODE:
-						x += y;
+						y += x;
 					break;
 					case SUB_CODE:
-						x -= y;
+						y -= x;
 					break;
 					case MUL_CODE:
-						x *= y;
+						y *= x;
 					break;
 					case DIV_CODE:
-						x /= y;
+						y /= x;
 					break;
 					default: ;
 				}
-				push_stack(stack, decimal(x));
+				push_stack(stack, decimal(y));
 			}
 			break;
 			case JMP_CODE: {
@@ -122,22 +122,22 @@ extern int32_t readvm_exc(FILE *input) {
 				int32_t y = pop_stack(stack).decimal;
 				switch(opcode) {
 					case JL_CODE:
-						if (x < y) {
+						if (y < x) {
 							fseek(input, index, SEEK_SET);
 						}
 					break;
 					case JG_CODE:
-						if (x > y) {
+						if (y > x) {
 							fseek(input, index, SEEK_SET);
 						}
 					break;
 					case JE_CODE:
-						if (x == y) {
+						if (y == x) {
 							fseek(input, index, SEEK_SET);
 						}
 					break;
 					case JNE_CODE:
-						if (x != y) {
+						if (y != x) {
 							fseek(input, index, SEEK_SET);
 						}
 					break;
