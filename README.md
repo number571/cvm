@@ -38,7 +38,7 @@ $ make build
 $ make run
 ```
 
-### Example (Factorial [Source])
+### Input .File main.vms
 ```asm
 ; Factorial
 label begin
@@ -81,7 +81,7 @@ label _clfact
     ret
 ```
 
-### Example (Factorial [Executable])
+### Output .File main.vme
 ```
 0000 0000 0a0d 0000 0011 0600 0000 0f01
 0f0c ffff fffe 0cff ffff ff00 0000 0002
