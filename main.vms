@@ -11,26 +11,26 @@ label end
 ; A <- fact(A)
 label fact
     ; B <- A
-    load $-2
+    load -2
     ; if B < 2
-    load $-1
+    load -1
     push 2
     jl _clfact
 label _fact
     ; B <- B - 1
-    load $-1
+    load -1
     push 1
     sub
-    store $-2 $-1
+    store -2 -1
     pop
     ; A <- A * B
-    load $-3
-    load $-2
+    load -3
+    load -2
     mul
-    store $-4 $-1
+    store -4 -1
     pop
     ; if B > 1
-    load $-1
+    load -1
     push 1
     jg _fact
 label _clfact

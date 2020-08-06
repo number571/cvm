@@ -8,8 +8,9 @@
 #include "extclib/stack.h"
 
 #define INSTRUCTION_NUM 18
+#define STACK_SIZE 10000
 
-enum {
+typedef enum opcode_t {
 	PUSH_CODE,
 	POP_CODE,
 	ADD_CODE,
@@ -29,7 +30,7 @@ enum {
 	LABEL_CODE,
 	COMMENT_CODE,
 	PASS_CODE,
-};
+} opcode_t;
 
 static const char *opcodelist[INSTRUCTION_NUM] = {
 	[PUSH_CODE]    = "push",
@@ -55,7 +56,8 @@ static const char *opcodelist[INSTRUCTION_NUM] = {
 extern int8_t readvm_src(FILE *output, FILE *input);
 extern int32_t readvm_exc(FILE *input);
 
-static char *_readcode(char *line, uint8_t *opcode);
+static void _print_error(FILE *input, opcode_t opcode);
+static char *_readcode(char *line, opcode_t *opcode);
 static int32_t _join_8bits_to_32bits(uint8_t *bytes);
 static void _split_32bits_to_8bits(int32_t num, uint8_t *bytes);
 static _Bool _strnull(char *str);
@@ -65,16 +67,21 @@ extern int32_t readvm_exc(FILE *input) {
 	fseek(input, 0, SEEK_END);
 	size_t fsize = ftell(input);
 
-	Stack *stack = new_stack(10000, DECIMAL_TYPE);
+	Stack *stack = new_stack(STACK_SIZE, DECIMAL_TYPE);
 	fseek(input, 0, SEEK_SET);
 
+	uint8_t ch;
 	int32_t value = 0;
-	uint8_t opcode;
+	opcode_t opcode;
 
 	while(!feof(input) && ftell(input) != fsize) {
-		fscanf(input, "%c", &opcode);
-		switch(opcode) {
+		fscanf(input, "%c", &ch);
+		switch(opcode = ch) {
 			case PUSH_CODE: {
+				if (size_stack(stack) == STACK_SIZE) {
+					_print_error(input, opcode);
+					return -1;
+				}
 				uint8_t bytes[4];
 				fscanf(input, "%c%c%c%c", &bytes[0], &bytes[1], &bytes[2], &bytes[3]);
 				int32_t num = _join_8bits_to_32bits(bytes);
@@ -82,11 +89,19 @@ extern int32_t readvm_exc(FILE *input) {
 			}
 			break;
 			case POP_CODE: {
+				if (size_stack(stack) == 0) {
+					_print_error(input, opcode);
+					return -1;
+				}
 				int32_t num = pop_stack(stack).decimal;
 				value = num;
 			}
 			break;
 			case ADD_CODE: case SUB_CODE: case MUL_CODE: case DIV_CODE: {
+				if (size_stack(stack) <= 1) {
+					_print_error(input, opcode);
+					return -1;
+				}
 				int32_t x = pop_stack(stack).decimal;
 				int32_t y = pop_stack(stack).decimal;
 				switch(opcode) {
@@ -110,35 +125,63 @@ extern int32_t readvm_exc(FILE *input) {
 			case JMP_CODE: {
 				uint8_t bytes[4];
 				fscanf(input, "%c%c%c%c", &bytes[0], &bytes[1], &bytes[2], &bytes[3]);
-				int32_t index = _join_8bits_to_32bits(bytes);
-				fseek(input, index, SEEK_SET);
+				int32_t num = _join_8bits_to_32bits(bytes);
+				if (num < 0) {
+					int32_t pos = size_stack(stack) + num;
+					if (pos < 0) {
+						_print_error(input, opcode);
+						return -1;
+					}
+					num = get_stack(stack, pos).decimal;
+				}
+				if (num >= fsize) {
+					_print_error(input, opcode);
+					return -1;
+				}
+				fseek(input, num, SEEK_SET);
 			}
 			break;
 			case JL_CODE: case JG_CODE: case JE_CODE: case JNE_CODE: {
+				if (size_stack(stack) <= 1) {
+					_print_error(input, opcode);
+					return -1;
+				}
 				uint8_t bytes[4];
 				fscanf(input, "%c%c%c%c", &bytes[0], &bytes[1], &bytes[2], &bytes[3]);
-				int32_t index = _join_8bits_to_32bits(bytes);
+				int32_t num = _join_8bits_to_32bits(bytes);
+				if (num < 0) {
+					int32_t pos = size_stack(stack) + num;
+					if (pos < 0) {
+						_print_error(input, opcode);
+						return -1;
+					}
+					num = get_stack(stack, pos).decimal;
+				}
+				if (num >= fsize) {
+					_print_error(input, opcode);
+					return -1;
+				}
 				int32_t x = pop_stack(stack).decimal;
 				int32_t y = pop_stack(stack).decimal;
 				switch(opcode) {
 					case JL_CODE:
 						if (y < x) {
-							fseek(input, index, SEEK_SET);
+							fseek(input, num, SEEK_SET);
 						}
 					break;
 					case JG_CODE:
 						if (y > x) {
-							fseek(input, index, SEEK_SET);
+							fseek(input, num, SEEK_SET);
 						}
 					break;
 					case JE_CODE:
 						if (y == x) {
-							fseek(input, index, SEEK_SET);
+							fseek(input, num, SEEK_SET);
 						}
 					break;
 					case JNE_CODE:
 						if (y != x) {
-							fseek(input, index, SEEK_SET);
+							fseek(input, num, SEEK_SET);
 						}
 					break;
 					default: ;
@@ -146,49 +189,88 @@ extern int32_t readvm_exc(FILE *input) {
 			}
 			break;
 			case STORE_CODE: {
-				int32_t i1, i2;
+				int32_t num1, num2;
 				uint8_t bytes[8];
 				fscanf(input, "%c%c%c%c%c%c%c%c", 
 					&bytes[0], &bytes[1], &bytes[2], &bytes[3],
 					&bytes[4], &bytes[5], &bytes[6], &bytes[7]);
-				i1 = _join_8bits_to_32bits(bytes);
-				i2 = _join_8bits_to_32bits(bytes+4);
-				if (i1 < 0) {
-					i1 = size_stack(stack) + i1;
+				num1 = _join_8bits_to_32bits(bytes);
+				num2 = _join_8bits_to_32bits(bytes+4);
+				if (num1 < 0) {
+					num1 = size_stack(stack) + num1;
 				}
-				if (i2 < 0) {
-					i2 = size_stack(stack) + i2;
+				if (num2 < 0) {
+					int32_t pos = size_stack(stack) + num2;
+					if (pos < 0) {
+						_print_error(input, opcode);
+						return -1;
+					}
+					num2 = get_stack(stack, pos).decimal;
 				}
-				set_stack(stack, i1, decimal(get_stack(stack, i2).decimal));
+				if (num1 >= size_stack(stack)) {
+					_print_error(input, opcode);
+					return -1;
+				}
+				set_stack(stack, num1, decimal(num2));
 			}
 			break;
 			case LOAD_CODE: {
 				uint8_t bytes[4];
 				fscanf(input, "%c%c%c%c", &bytes[0], &bytes[1], &bytes[2], &bytes[3]);
-				int32_t i1 = _join_8bits_to_32bits(bytes);
-				if (i1 < 0) {
-					i1 = size_stack(stack) + i1;
+				int32_t num = _join_8bits_to_32bits(bytes);
+				if (num < 0) {
+					int32_t pos = size_stack(stack) + num;
+					if (pos < 0) {
+						_print_error(input, opcode);
+						return -1;
+					}
+					num = get_stack(stack, pos).decimal;
 				}
-				push_stack(stack, decimal(get_stack(stack, i1).decimal));
+				if (size_stack(stack) == STACK_SIZE) {
+					_print_error(input, opcode);
+					return -1;
+				}
+				push_stack(stack, decimal(num));
 			}
 			break;
 			case CALL_CODE: {
 				uint8_t bytes[4];
 				fscanf(input, "%c%c%c%c", &bytes[0], &bytes[1], &bytes[2], &bytes[3]);
-				int32_t i1 = _join_8bits_to_32bits(bytes);
-				int32_t curr_pos = ftell(input);
-				push_stack(stack, decimal(curr_pos));
-				fseek(input, i1, SEEK_SET);
+				int32_t num = _join_8bits_to_32bits(bytes);
+				if (num < 0) {
+					int32_t pos = size_stack(stack) + num;
+					if (pos < 0) {
+						_print_error(input, opcode);
+						return -1;
+					}
+					num = get_stack(stack, pos).decimal;
+				}
+				if (num >= fsize) {
+					_print_error(input, opcode);
+					return -1;
+				}
+				int32_t pos = ftell(input);
+				if (size_stack(stack) == STACK_SIZE) {
+					_print_error(input, opcode);
+					return -1;
+				}
+				push_stack(stack, decimal(pos));
+				fseek(input, num, SEEK_SET);
 			}
 			break;
 			case RET_CODE: {
-				int32_t i1 = pop_stack(stack).decimal;
-				fseek(input, i1, SEEK_SET);
+				if (size_stack(stack) == 0) {
+					_print_error(input, opcode);
+					return -1;
+				}
+				int32_t num = pop_stack(stack).decimal;
+				fseek(input, num, SEEK_SET);
 			}
 			break;
 			case HLT_CODE:
 				goto close;
 			break;
+			default: ;
 		}
 	}
 close:
@@ -201,16 +283,16 @@ extern int8_t readvm_src(FILE *output, FILE *input) {
 	char buffer[BUFSIZ] = {0};
 
 	size_t line_index = 0;
+	size_t curr_pos = 0;
 	_Bool err_exist = 0;
-	int32_t curr_pos = 0;
 
-	char *line;
-	uint8_t opcode;
+	char *arg;
+	opcode_t opcode;
 
 	while(fgets(buffer, BUFSIZ, input) != NULL) {
 		++line_index;
-		line = _readcode(buffer, &opcode);
-		if((opcode == PASS_CODE && _strnull(line)) || opcode == COMMENT_CODE) {
+		arg = _readcode(buffer, &opcode);
+		if((opcode == PASS_CODE && _strnull(arg)) || opcode == COMMENT_CODE) {
 			continue;
 		}
 		if (opcode == PASS_CODE) {
@@ -231,7 +313,7 @@ extern int8_t readvm_src(FILE *output, FILE *input) {
 				curr_pos += 9;
 			break;
 			case LABEL_CODE:
-				set_hashtab(hashtab, string(line), decimal(curr_pos));
+				set_hashtab(hashtab, string(arg), decimal(curr_pos));
 			break;
 			default: ;
 		}
@@ -245,80 +327,57 @@ extern int8_t readvm_src(FILE *output, FILE *input) {
 	fseek(input, 0, SEEK_SET);
 
 	while(fgets(buffer, BUFSIZ, input) != NULL) {
-		line = _readcode(buffer, &opcode);
+		arg = _readcode(buffer, &opcode);
 		switch (opcode) {
-			case PUSH_CODE: {
-				int32_t num = atoi(line);
-				uint8_t bytes[4];
-				_split_32bits_to_8bits(num, bytes);
-				fprintf(output, "%c%c%c%c%c", opcode, bytes[0], bytes[1], bytes[2], bytes[3]);
-			}
-			break;
 			case POP_CODE: case ADD_CODE: case SUB_CODE: case MUL_CODE: case DIV_CODE:
 			case RET_CODE: case HLT_CODE: {
 				fprintf(output, "%c", opcode);
 			}
 			break;
 			case JMP_CODE: case JL_CODE: case JG_CODE: case JE_CODE: case JNE_CODE: 
-			case CALL_CODE: {
-				int32_t index = get_hashtab(hashtab, string(line)).decimal;
+			case CALL_CODE: case LOAD_CODE: case PUSH_CODE: {
+				int32_t num;
+				if (in_hashtab(hashtab, arg)) {
+					num = get_hashtab(hashtab, arg).decimal;
+				} else {
+					num = atoi(arg);
+				}
 				uint8_t bytes[4];
-				_split_32bits_to_8bits(index, bytes);
+				_split_32bits_to_8bits(num, bytes);
 				fprintf(output, "%c%c%c%c%c", opcode, bytes[0], bytes[1], bytes[2], bytes[3]);
 			}
 			break;
-			/*
-				store $0 $1
-				store $-1 $-2
-			*/
 			case STORE_CODE: {
-				char *arg = line + strlen(line) + 1;
-				while(isspace(*arg)) {
-					++arg;
+				char *arg2 = arg + strlen(arg) + 1;
+				while(isspace(*arg2)) {
+					++arg2;
 				}
-				char *ptr = arg;
+				char *ptr = arg2;
 				while(!isspace(*ptr)) {
 					++ptr;
 				}
 				*ptr = '\0';
-				int32_t i1 = 0;
-				if (line[1] == '-') {
-					i1 = -atoi(line+2);
+				int32_t num1;
+				int32_t num2;
+				if (in_hashtab(hashtab, arg)) {
+					num1 = get_hashtab(hashtab, arg).decimal;
 				} else {
-					i1 = atoi(line+1);
+					num1 = atoi(arg);
 				}
-				int32_t i2 = 0;
-				if (arg[1] == '-') {
-					i2 = -atoi(arg+2);
+				if (in_hashtab(hashtab, arg2)) {
+					num2 = get_hashtab(hashtab, arg2).decimal;
 				} else {
-					i2 = atoi(arg+1);
+					num2 = atoi(arg2);
 				}
 				uint8_t bytes[8];
-				_split_32bits_to_8bits(i1, bytes);
-				_split_32bits_to_8bits(i2, bytes+4);
-
+				_split_32bits_to_8bits(num1, bytes);
+				_split_32bits_to_8bits(num2, bytes+4);
 				fprintf(output, "%c%c%c%c%c%c%c%c%c", opcode,
 					bytes[0], bytes[1], bytes[2], bytes[3],
 					bytes[4], bytes[5], bytes[6], bytes[7]);
 			}
 			break;
-			/*
-				load $0
-				load $-1
-			*/
-			case LOAD_CODE: {
-				int32_t i1 = 0;
-				if (line[1] == '-') {
-					i1 = -atoi(line+2);
-				} else {
-					i1 = atoi(line+1);
-				}
-				uint8_t bytes[4];
-				_split_32bits_to_8bits(i1, bytes);
-				fprintf(output, "%c%c%c%c%c", opcode,
-					bytes[0], bytes[1], bytes[2], bytes[3]);
-			}
-			break;
+			default: ;
 		}
 	}
 
@@ -326,7 +385,11 @@ extern int8_t readvm_src(FILE *output, FILE *input) {
 	return 0;
 }
 
-static char *_readcode(char *line, uint8_t *opcode) {
+static void _print_error(FILE *input, opcode_t opcode) {
+	fprintf(stderr, "Error: %s (0x%02X)\nPosition: %ld bytes\n", opcodelist[opcode], opcode, ftell(input));
+}
+
+static char *_readcode(char *line, opcode_t *opcode) {
 	char *ptr = line;
 	while(isspace(*ptr)) {
 		++ptr;
