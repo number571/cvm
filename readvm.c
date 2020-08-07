@@ -215,25 +215,36 @@ extern int32_t readvm_exc(FILE *input) {
 			}
 			break;
 			case LOAD_CODE: {
-				uint8_t bytes[4];
-				fscanf(input, "%c%c%c%c", &bytes[0], &bytes[1], &bytes[2], &bytes[3]);
-				int32_t num = _join_8bits_to_32bits(bytes);
-				if (num < 0) {
-					int32_t pos = size_stack(stack) + num;
-					if (pos < 0) {
-						_print_error(input, opcode);
-						return -1;
-					}
-					num = get_stack(stack, pos).decimal;
-				}
 				if (size_stack(stack) == STACK_SIZE) {
 					_print_error(input, opcode);
 					return -1;
 				}
+				uint8_t bytes[4];
+				fscanf(input, "%c%c%c%c", &bytes[0], &bytes[1], &bytes[2], &bytes[3]);
+				int32_t pos;
+				int32_t num = _join_8bits_to_32bits(bytes);
+				if (num < 0) {
+					pos = size_stack(stack) + num;
+					if (pos < 0) {
+						_print_error(input, opcode);
+						return -1;
+					}
+				} else {
+					pos = num;
+					if (pos >= size_stack(stack)) {
+						_print_error(input, opcode);
+						return -1;
+					}
+				}
+				num = get_stack(stack, pos).decimal;
 				push_stack(stack, decimal(num));
 			}
 			break;
 			case CALL_CODE: {
+				if (size_stack(stack) == STACK_SIZE) {
+					_print_error(input, opcode);
+					return -1;
+				}
 				uint8_t bytes[4];
 				fscanf(input, "%c%c%c%c", &bytes[0], &bytes[1], &bytes[2], &bytes[3]);
 				int32_t num = _join_8bits_to_32bits(bytes);
@@ -250,10 +261,6 @@ extern int32_t readvm_exc(FILE *input) {
 					return -1;
 				}
 				int32_t pos = ftell(input);
-				if (size_stack(stack) == STACK_SIZE) {
-					_print_error(input, opcode);
-					return -1;
-				}
 				push_stack(stack, decimal(pos));
 				fseek(input, num, SEEK_SET);
 			}
@@ -335,13 +342,20 @@ extern int8_t readvm_src(FILE *output, FILE *input) {
 			}
 			break;
 			case JMP_CODE: case JL_CODE: case JG_CODE: case JE_CODE: case JNE_CODE: 
-			case CALL_CODE: case LOAD_CODE: case PUSH_CODE: {
+			case CALL_CODE: case PUSH_CODE: {
 				int32_t num;
 				if (in_hashtab(hashtab, arg)) {
 					num = get_hashtab(hashtab, arg).decimal;
 				} else {
 					num = atoi(arg);
 				}
+				uint8_t bytes[4];
+				_split_32bits_to_8bits(num, bytes);
+				fprintf(output, "%c%c%c%c%c", opcode, bytes[0], bytes[1], bytes[2], bytes[3]);
+			}
+			break;
+			case LOAD_CODE: {
+				int32_t num = atoi(arg);
 				uint8_t bytes[4];
 				_split_32bits_to_8bits(num, bytes);
 				fprintf(output, "%c%c%c%c%c", opcode, bytes[0], bytes[1], bytes[2], bytes[3]);
@@ -357,18 +371,8 @@ extern int8_t readvm_src(FILE *output, FILE *input) {
 					++ptr;
 				}
 				*ptr = '\0';
-				int32_t num1;
-				int32_t num2;
-				if (in_hashtab(hashtab, arg)) {
-					num1 = get_hashtab(hashtab, arg).decimal;
-				} else {
-					num1 = atoi(arg);
-				}
-				if (in_hashtab(hashtab, arg2)) {
-					num2 = get_hashtab(hashtab, arg2).decimal;
-				} else {
-					num2 = atoi(arg2);
-				}
+				int32_t num1 = atoi(arg);
+				int32_t num2 = atoi(arg2);
 				uint8_t bytes[8];
 				_split_32bits_to_8bits(num1, bytes);
 				_split_32bits_to_8bits(num2, bytes+4);
