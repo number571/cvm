@@ -190,6 +190,7 @@ extern int32_t readvm_exc(FILE *input) {
 			break;
 			case STORE_CODE: {
 				int32_t num1, num2;
+				int32_t pos1, pos2;
 				uint8_t bytes[8];
 				fscanf(input, "%c%c%c%c%c%c%c%c", 
 					&bytes[0], &bytes[1], &bytes[2], &bytes[3],
@@ -197,21 +198,33 @@ extern int32_t readvm_exc(FILE *input) {
 				num1 = _join_8bits_to_32bits(bytes);
 				num2 = _join_8bits_to_32bits(bytes+4);
 				if (num1 < 0) {
-					num1 = size_stack(stack) + num1;
-				}
-				if (num2 < 0) {
-					int32_t pos = size_stack(stack) + num2;
-					if (pos < 0) {
+					pos1 = size_stack(stack) + num1;
+					if (pos1 < 0) {
 						_print_error(input, opcode);
 						return -1;
 					}
-					num2 = get_stack(stack, pos).decimal;
+				} else {
+					pos1 = num1;
+					if (pos1 >= size_stack(stack)) {
+						_print_error(input, opcode);
+						return -1;
+					}
 				}
-				if (num1 >= size_stack(stack)) {
-					_print_error(input, opcode);
-					return -1;
+				if (num2 < 0) {
+					pos2 = size_stack(stack) + num2;
+					if (pos2 < 0) {
+						_print_error(input, opcode);
+						return -1;
+					}
+				} else {
+					pos2 = num2;
+					if (pos2 >= size_stack(stack)) {
+						_print_error(input, opcode);
+						return -1;
+					}
 				}
-				set_stack(stack, num1, decimal(num2));
+				num2 = get_stack(stack, pos2).decimal;
+				set_stack(stack, pos1, decimal(num2));
 			}
 			break;
 			case LOAD_CODE: {
