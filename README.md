@@ -26,14 +26,14 @@
 ### Interface functions
 ```c
 // translate source file (input) into executable (output)
-extern int8_t readvm_src(FILE *output, FILE *input);
+extern int readvm_src(FILE *output, FILE *input);
 // run executable file
-extern int32_t readvm_exc(FILE *input);
+extern int readvm_exc(FILE *input);
 ```
 
 ### Compile and run
 ```
-$ make -C extclib/
+$ make install
 $ make build
 $ make run
 ```

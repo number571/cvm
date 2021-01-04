@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <stdint.h>
 #include <string.h>
 
 #define ERROR_NUM 6
@@ -22,16 +21,17 @@ static const char *errors[ERROR_NUM] = {
     [COMPILE_ERR] = "compile file",
 };
 
-extern int8_t readvm_src(FILE *output, FILE *input);
-extern int32_t readvm_exc(FILE *input);
+extern int readvm_src(FILE *output, FILE *input);
+extern int readvm_exc(FILE *input);
 
 static char *help(void);
-static void compilevm_src(const char *outputf, const char *inputf, int *retcode);
-static int32_t runvm_exc(const char *filename, int *retcode);
+static int compilevm_src(const char *outputf, const char *inputf);
+static int runvm_exc(const char *filename, int *retcode);
 
 int main(int argc, char const *argv[]) {
-    int retcode = NONE_ERR;
+    int retcode;
 
+    retcode = NONE_ERR;
     if (argc < 3) {
         retcode = ARGLEN_ERR;
         goto close;
@@ -39,9 +39,9 @@ int main(int argc, char const *argv[]) {
 
     if (strcmp(argv[1], "build") == 0) {
         if (argc >= 5 && strcmp(argv[3], "-o") == 0) {
-            compilevm_src(argv[4], argv[2], &retcode);
+            retcode = compilevm_src(argv[4], argv[2]);
         } else {
-            compilevm_src("main.vme", argv[2], &retcode);
+            retcode = compilevm_src("main.vme", argv[2]);
         }
         goto close;
     } 
@@ -71,33 +71,31 @@ static char *help(void) {
     "END _Help_info_\n";
 }
 
-static void compilevm_src(const char *outputf, const char *inputf, int *retcode) {
+static int compilevm_src(const char *outputf, const char *inputf) {
     FILE *input = fopen(inputf, "r");
     if (input == NULL) {
-        *retcode = INOPEN_ERR;
-        return;
+        return INOPEN_ERR;
     }
     FILE *output = fopen(outputf, "wb");
     if (input == NULL) {
-        *retcode = OUTOPEN_ERR;
-        return;
+        return OUTOPEN_ERR;
     }
-    int8_t res = readvm_src(output, input);
+    int res = readvm_src(output, input);
     fclose(input);
     fclose(output);
     if (res != 0) {
-        *retcode = COMPILE_ERR;
-        return;
+        return COMPILE_ERR;
     }
+    return NONE_ERR;
 }
 
-static int32_t runvm_exc(const char *filename, int *retcode) {
+static int runvm_exc(const char *filename, int *retcode) {
     FILE *input = fopen(filename, "r");
     if (input == NULL) {
         *retcode = INOPEN_ERR;
         return 0;
     }
-    int32_t res = readvm_exc(input);
+    int res = readvm_exc(input);
     fclose(input);
     return res;
 }
