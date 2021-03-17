@@ -1,7 +1,7 @@
 # VirtualMachine
 > Stack-based virtual machine.
 
-### Instructions (num = 16)
+### Instructions (num = 17)
 1.  [0x00] "push"  
 2.  [0x01] "pop"   
 3.  [0x02] "add"   
@@ -17,7 +17,8 @@
 13. [0x0C] "load"  
 14. [0x0D] "call"  
 15. [0x0E] "ret"   
-16. [0x0F] "hlt"   
+16. [0x0F] "hlt"  
+17. [0x10] "alloc"
 
 ### Pseudo instructions (num = 2)
 1. "label"
@@ -28,7 +29,7 @@
 // translate source file (input) into executable (output)
 extern int readvm_src(FILE *output, FILE *input);
 // run executable file
-extern int readvm_exc(FILE *input);
+extern int readvm_exc(FILE *input, int *result);
 ```
 
 ### Compile and run
