@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define ERROR_NUM 6
+#define ERROR_NUM 7
 
 typedef enum error_t {
     NONE_ERR,
@@ -10,26 +10,27 @@ typedef enum error_t {
     INOPEN_ERR,
     OUTOPEN_ERR,
     COMPILE_ERR,
+    EXEC_ERR,
 } error_t;
 
 static const char *errors[ERROR_NUM] = {
-    [NONE_ERR] = "",
-    [ARGLEN_ERR] = "len argc < 3",
+    [NONE_ERR]    = "",
+    [ARGLEN_ERR]  = "len argc < 3",
     [COMMAND_ERR] = "unknown command",
-    [INOPEN_ERR] = "open input file",
+    [INOPEN_ERR]  = "open input file",
     [OUTOPEN_ERR] = "open output file",
     [COMPILE_ERR] = "compile file",
+    [EXEC_ERR]    = "exec algorithm",
 };
 
 extern int readvm_src(FILE *output, FILE *input);
-extern int readvm_exc(FILE *input);
+extern int readvm_exc(FILE *input, int *result);
 
-static char *help(void);
 static int compilevm_src(const char *outputf, const char *inputf);
 static int runvm_exc(const char *filename, int *retcode);
 
 int main(int argc, char const *argv[]) {
-    int retcode;
+    int result, retcode;
 
     retcode = NONE_ERR;
     if (argc < 3) {
@@ -47,7 +48,11 @@ int main(int argc, char const *argv[]) {
     } 
 
     if (strcmp(argv[1], "run") == 0) {
-        printf("Return code: %d\n", runvm_exc(argv[2], &retcode));
+    	retcode = runvm_exc(argv[2], &result);
+    	if (retcode != NONE_ERR) {
+    		retcode = EXEC_ERR;
+    	}
+        printf("result exec: %d\n", result);
         goto close;
     } 
 
@@ -55,20 +60,9 @@ int main(int argc, char const *argv[]) {
 
 close:
     if (retcode != NONE_ERR) {
-        fprintf(stderr, "> %s\n%s", errors[retcode], help());
+        fprintf(stderr, "> %s\n", errors[retcode]);
     }
-
     return retcode;
-}
-
-static char *help(void) {
-    return \
-    "BEGIN _Help_info_\n" \
-    "\t1. Compile:\n" \
-    "\t\t$ cvm build main.vms\n" \
-    "\t2. Run bytecode:\n" \
-    "\t\t$ cvm run main.vme\n" \
-    "END _Help_info_\n";
 }
 
 static int compilevm_src(const char *outputf, const char *inputf) {
@@ -89,13 +83,12 @@ static int compilevm_src(const char *outputf, const char *inputf) {
     return NONE_ERR;
 }
 
-static int runvm_exc(const char *filename, int *retcode) {
+static int runvm_exc(const char *filename, int *result) {
     FILE *input = fopen(filename, "r");
     if (input == NULL) {
-        *retcode = INOPEN_ERR;
-        return 0;
+        return INOPEN_ERR;
     }
-    int res = readvm_exc(input);
+    int retcode = readvm_exc(input, result);
     fclose(input);
-    return res;
+    return retcode;
 }
