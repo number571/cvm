@@ -1,11 +1,6 @@
-label begin
-    push 10
-    call fact
+label start
     alloc 2
-    je end
-label end
-    pop
-    hlt
+    je begin
 
 ; A <- fact(A)
 label fact
@@ -35,6 +30,15 @@ label _fact_end
     ; return
     pop
     ret
+
+label begin
+    push 10
+    call fact
+    alloc 2
+    je end
+label end
+    pop
+    hlt
 
 ; A <- mul(A, B)
 label mul

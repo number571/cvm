@@ -103,7 +103,7 @@ extern int readvm_exc(FILE *input, int *result) {
 			break;
 			case ADD_CODE: case SUB_CODE: {
 				int32_t x, y;
-				if (stack_size(stack) <= 1) {
+				if (stack_size(stack) < 2) {
 					return 3;
 				}
 				x = *(int32_t*)stack_pop(stack);
@@ -122,18 +122,18 @@ extern int readvm_exc(FILE *input, int *result) {
 			break;
 			case JL_CODE: case JG_CODE: case JE_CODE: {
 				uint8_t bytes[4];
-				int32_t num, pos, x, y;
-				if (stack_size(stack) <= 1) {
+				int32_t num, x, y;
+				if (stack_size(stack) < 2) {
 					return 6;
 				}
 				fscanf(input, "%c%c%c%c", &bytes[0], &bytes[1], &bytes[2], &bytes[3]);
 				num = (int32_t)join_8bits_to_32bits(bytes);
 				if (num < 0) {
-					pos = stack_size(stack) + num;
-					if (pos < 0) {
+					num = stack_size(stack) + num;
+					if (num < 0) {
 						return 7;
 					}
-					num = *(int32_t*)stack_get(stack, pos);
+					num = *(int32_t*)stack_get(stack, num);
 				}
 				if (num >= fsize) {
 					return 8;
@@ -163,58 +163,54 @@ extern int readvm_exc(FILE *input, int *result) {
 			case STORE_CODE: {
 				uint8_t bytes[8];
 				int32_t num1, num2;
-				int32_t pos1, pos2;
 				fscanf(input, "%c%c%c%c%c%c%c%c", 
 					&bytes[0], &bytes[1], &bytes[2], &bytes[3],
 					&bytes[4], &bytes[5], &bytes[6], &bytes[7]);
 				num1 = (int32_t)join_8bits_to_32bits(bytes);
 				num2 = (int32_t)join_8bits_to_32bits(bytes+4);
 				if (num1 < 0) {
-					pos1 = stack_size(stack) + num1;
-					if (pos1 < 0) {
+					num1 = stack_size(stack) + num1;
+					if (num1 < 0) {
 						return 9;
 					}
 				} else {
-					pos1 = num1;
-					if (pos1 >= stack_size(stack)) {
+					if (num1 >= stack_size(stack)) {
 						return 10;
 					}
 				}
 				if (num2 < 0) {
-					pos2 = stack_size(stack) + num2;
-					if (pos2 < 0) {
+					num2 = stack_size(stack) + num2;
+					if (num2 < 0) {
 						return 11;
 					}
 				} else {
-					pos2 = num2;
-					if (pos2 >= stack_size(stack)) {
+					if (num2 >= stack_size(stack)) {
 						return 12;
 					}
 				}
-				num2 = *(int32_t*)stack_get(stack, pos2);
-				stack_set(stack, pos1, &num2);
+				num2 = *(int32_t*)stack_get(stack, num2);
+				stack_set(stack, num1, &num2);
 			}
 			break;
 			case LOAD_CODE: {
 				uint8_t bytes[4];
-				int32_t pos, num;
+				int32_t num;
 				if (stack_size(stack) == STACK_SIZE) {
 					return 13;
 				}
 				fscanf(input, "%c%c%c%c", &bytes[0], &bytes[1], &bytes[2], &bytes[3]);
 				num = (int32_t)join_8bits_to_32bits(bytes);
 				if (num < 0) {
-					pos = stack_size(stack) + num;
-					if (pos < 0) {
+					num = stack_size(stack) + num;
+					if (num < 0) {
 						return 14;
 					}
 				} else {
-					pos = num;
-					if (pos >= stack_size(stack)) {
+					if (num >= stack_size(stack)) {
 						return 15;
 					}
 				}
-				num = *(int32_t*)stack_get(stack, pos);
+				num = *(int32_t*)stack_get(stack, num);
 				stack_push(stack, &num);
 			}
 			break;
@@ -227,11 +223,11 @@ extern int readvm_exc(FILE *input, int *result) {
 				fscanf(input, "%c%c%c%c", &bytes[0], &bytes[1], &bytes[2], &bytes[3]);
 				num = (int32_t)join_8bits_to_32bits(bytes);
 				if (num < 0) {
-					int32_t pos = stack_size(stack) + num;
-					if (pos < 0) {
+					num = stack_size(stack) + num;
+					if (num < 0) {
 						return 17;
 					}
-					num = *(int32_t*)stack_get(stack, pos);
+					num = *(int32_t*)stack_get(stack, num);
 				}
 				if (num >= fsize) {
 					return 18;
@@ -264,15 +260,15 @@ close:
 
 extern int readvm_src(FILE *output, FILE *input) {
 	hashtab_t *hashtab;
+	int line_index, byte_index, err_exist;
 	char buffer[BUFSIZ];
-	int line_index, curr_pos, err_exist;
 	char *arg;
 	uint8_t opcode;
 
-	hashtab = hashtab_new(250);
+	hashtab = hashtab_new(512);
 	line_index = 0;
-	curr_pos = 0;
-	err_exist = 0;
+	byte_index = 0;
+	err_exist  = 0;
 
 	while(fgets(buffer, BUFSIZ, input) != NULL) {
 		++line_index;
@@ -288,17 +284,17 @@ extern int readvm_src(FILE *output, FILE *input) {
 		switch(opcode) {
 			case POP_CODE: case ADD_CODE: case SUB_CODE: 
 			case RET_CODE: case HLT_CODE:
-				curr_pos += 1;
+				byte_index += 1;
 			break;
 			case PUSH_CODE: case JL_CODE: case JG_CODE:
 			case JE_CODE: case LOAD_CODE: case CALL_CODE: case ALLOC_CODE:
-				curr_pos += 5;
+				byte_index += 5;
 			break;
 			case STORE_CODE:
-				curr_pos += 9;
+				byte_index += 9;
 			break;
 			case LABEL_CODE:
-				hashtab_insert(hashtab, arg, &curr_pos, sizeof(curr_pos));
+				hashtab_insert(hashtab, arg, &byte_index, sizeof(byte_index));
 			break;
 			default: ;
 		}
