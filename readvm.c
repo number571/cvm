@@ -78,6 +78,9 @@ extern int readvm_exc(FILE *input, int *result) {
 				fscanf(input, "%c%c%c%c", &bytes[0], &bytes[1], &bytes[2], &bytes[3]);
 				num = (int32_t)join_8bits_to_32bits(bytes);
 				pad = 0x00;
+				if (stack_size(stack) + num >= STACK_SIZE) {
+					return 1;
+				}
 				for (int i = 0; i < num; ++i) {
 					stack_push(stack, &pad);
 				}
@@ -87,7 +90,7 @@ extern int readvm_exc(FILE *input, int *result) {
 				int32_t num;
 				uint8_t bytes[4];
 				if (stack_size(stack) == STACK_SIZE) {
-					return 1;
+					return 2;
 				}
 				fscanf(input, "%c%c%c%c", &bytes[0], &bytes[1], &bytes[2], &bytes[3]);
 				num = (int32_t)join_8bits_to_32bits(bytes);
@@ -96,7 +99,7 @@ extern int readvm_exc(FILE *input, int *result) {
 			break;
 			case POP_CODE: {
 				if (stack_size(stack) == 0) {
-					return 2;
+					return 3;
 				}
 				*result = *(int32_t*)stack_pop(stack);
 			}
@@ -104,7 +107,7 @@ extern int readvm_exc(FILE *input, int *result) {
 			case ADD_CODE: case SUB_CODE: {
 				int32_t x, y;
 				if (stack_size(stack) < 2) {
-					return 3;
+					return 4;
 				}
 				x = *(int32_t*)stack_pop(stack);
 				y = *(int32_t*)stack_pop(stack);
@@ -124,19 +127,19 @@ extern int readvm_exc(FILE *input, int *result) {
 				uint8_t bytes[4];
 				int32_t num, x, y;
 				if (stack_size(stack) < 2) {
-					return 6;
+					return 5;
 				}
 				fscanf(input, "%c%c%c%c", &bytes[0], &bytes[1], &bytes[2], &bytes[3]);
 				num = (int32_t)join_8bits_to_32bits(bytes);
 				if (num < 0) {
 					num = stack_size(stack) + num;
 					if (num < 0) {
-						return 7;
+						return 6;
 					}
 					num = *(int32_t*)stack_get(stack, num);
 				}
 				if (num >= fsize) {
-					return 8;
+					return 7;
 				}
 				x = *(int32_t*)stack_pop(stack);
 				y = *(int32_t*)stack_pop(stack);
@@ -171,21 +174,21 @@ extern int readvm_exc(FILE *input, int *result) {
 				if (num1 < 0) {
 					num1 = stack_size(stack) + num1;
 					if (num1 < 0) {
-						return 9;
+						return 8;
 					}
 				} else {
 					if (num1 >= stack_size(stack)) {
-						return 10;
+						return 9;
 					}
 				}
 				if (num2 < 0) {
 					num2 = stack_size(stack) + num2;
 					if (num2 < 0) {
-						return 11;
+						return 10;
 					}
 				} else {
 					if (num2 >= stack_size(stack)) {
-						return 12;
+						return 11;
 					}
 				}
 				num2 = *(int32_t*)stack_get(stack, num2);
@@ -196,18 +199,18 @@ extern int readvm_exc(FILE *input, int *result) {
 				uint8_t bytes[4];
 				int32_t num;
 				if (stack_size(stack) == STACK_SIZE) {
-					return 13;
+					return 12;
 				}
 				fscanf(input, "%c%c%c%c", &bytes[0], &bytes[1], &bytes[2], &bytes[3]);
 				num = (int32_t)join_8bits_to_32bits(bytes);
 				if (num < 0) {
 					num = stack_size(stack) + num;
 					if (num < 0) {
-						return 14;
+						return 13;
 					}
 				} else {
 					if (num >= stack_size(stack)) {
-						return 15;
+						return 14;
 					}
 				}
 				num = *(int32_t*)stack_get(stack, num);
@@ -218,19 +221,19 @@ extern int readvm_exc(FILE *input, int *result) {
 				uint8_t bytes[4];
 				int32_t num, pos;
 				if (stack_size(stack) == STACK_SIZE) {
-					return 16;
+					return 15;
 				}
 				fscanf(input, "%c%c%c%c", &bytes[0], &bytes[1], &bytes[2], &bytes[3]);
 				num = (int32_t)join_8bits_to_32bits(bytes);
 				if (num < 0) {
 					num = stack_size(stack) + num;
 					if (num < 0) {
-						return 17;
+						return 16;
 					}
 					num = *(int32_t*)stack_get(stack, num);
 				}
 				if (num >= fsize) {
-					return 18;
+					return 17;
 				}
 				pos = ftell(input);
 				stack_push(stack, &pos);
@@ -240,7 +243,7 @@ extern int readvm_exc(FILE *input, int *result) {
 			case RET_CODE: {
 				int32_t num;
 				if (stack_size(stack) == 0) {
-					return 19;
+					return 18;
 				}
 				num = *(int32_t*)stack_pop(stack);
 				fseek(input, num, SEEK_SET);
