@@ -57,10 +57,11 @@ extern int readvm_src(FILE *output, FILE *input);
 extern int readvm_exc(FILE *input, int *result);
 
 static char *readcode(char *line, uint8_t *opcode);
-static int32_t join_8bits_to_32bits(uint8_t *bytes);
-static void split_32bits_to_8bits(int32_t num, uint8_t *bytes);
-static _Bool strnull(char *str);
-static _Bool _isspace(char ch);
+
+static uint32_t join_8bits_to_32bits(uint8_t *bytes);
+static void split_32bits_to_8bits(uint32_t num, uint8_t *bytes);
+
+static int strnull(char *str);
 
 extern int readvm_exc(FILE *input, int *result) {
 	stack_t *stack;
@@ -81,7 +82,7 @@ extern int readvm_exc(FILE *input, int *result) {
 				int32_t null = 0;
 				uint8_t bytes[4];
 				fscanf(input, "%c%c%c%c", &bytes[0], &bytes[1], &bytes[2], &bytes[3]);
-				num = join_8bits_to_32bits(bytes);
+				num = (int32_t)join_8bits_to_32bits(bytes);
 				for (int i = 0; i < num; ++i) {
 					stack_push(stack, &null);
 				}
@@ -94,7 +95,7 @@ extern int readvm_exc(FILE *input, int *result) {
 					return 1;
 				}
 				fscanf(input, "%c%c%c%c", &bytes[0], &bytes[1], &bytes[2], &bytes[3]);
-				num = join_8bits_to_32bits(bytes);
+				num = (int32_t)join_8bits_to_32bits(bytes);
 				stack_push(stack, &num);
 			}
 			break;
@@ -140,7 +141,7 @@ extern int readvm_exc(FILE *input, int *result) {
 				int32_t *temp;
 				int32_t num;
 				fscanf(input, "%c%c%c%c", &bytes[0], &bytes[1], &bytes[2], &bytes[3]);
-				num = join_8bits_to_32bits(bytes);
+				num = (int32_t)join_8bits_to_32bits(bytes);
 				if (num < 0) {
 					int32_t pos = stack_size(stack) + num;
 					if (pos < 0) {
@@ -163,7 +164,7 @@ extern int readvm_exc(FILE *input, int *result) {
 					return 6;
 				}
 				fscanf(input, "%c%c%c%c", &bytes[0], &bytes[1], &bytes[2], &bytes[3]);
-				num = join_8bits_to_32bits(bytes);
+				num = (int32_t)join_8bits_to_32bits(bytes);
 				if (num < 0) {
 					pos = stack_size(stack) + num;
 					if (pos < 0) {
@@ -207,8 +208,8 @@ extern int readvm_exc(FILE *input, int *result) {
 				fscanf(input, "%c%c%c%c%c%c%c%c", 
 					&bytes[0], &bytes[1], &bytes[2], &bytes[3],
 					&bytes[4], &bytes[5], &bytes[6], &bytes[7]);
-				num1 = join_8bits_to_32bits(bytes);
-				num2 = join_8bits_to_32bits(bytes+4);
+				num1 = (int32_t)join_8bits_to_32bits(bytes);
+				num2 = (int32_t)join_8bits_to_32bits(bytes+4);
 				if (num1 < 0) {
 					pos1 = stack_size(stack) + num1;
 					if (pos1 < 0) {
@@ -244,7 +245,7 @@ extern int readvm_exc(FILE *input, int *result) {
 					return 13;
 				}
 				fscanf(input, "%c%c%c%c", &bytes[0], &bytes[1], &bytes[2], &bytes[3]);
-				num = join_8bits_to_32bits(bytes);
+				num = (int32_t)join_8bits_to_32bits(bytes);
 				if (num < 0) {
 					pos = stack_size(stack) + num;
 					if (pos < 0) {
@@ -269,7 +270,7 @@ extern int readvm_exc(FILE *input, int *result) {
 					return 16;
 				}
 				fscanf(input, "%c%c%c%c", &bytes[0], &bytes[1], &bytes[2], &bytes[3]);
-				num = join_8bits_to_32bits(bytes);
+				num = (int32_t)join_8bits_to_32bits(bytes);
 				if (num < 0) {
 					int32_t pos = stack_size(stack) + num;
 					if (pos < 0) {
@@ -377,7 +378,7 @@ extern int readvm_src(FILE *output, FILE *input) {
 				} else {
 					num = atoi(arg);
 				}
-				split_32bits_to_8bits(num, bytes);
+				split_32bits_to_8bits((uint32_t)num, bytes);
 				fprintf(output, "%c%c%c%c%c", opcode, bytes[0], bytes[1], bytes[2], bytes[3]);
 			}
 			break;
@@ -385,7 +386,7 @@ extern int readvm_src(FILE *output, FILE *input) {
 				uint8_t bytes[4];
 				int32_t num;
 				num = atoi(arg);
-				split_32bits_to_8bits(num, bytes);
+				split_32bits_to_8bits((uint32_t)num, bytes);
 				fprintf(output, "%c%c%c%c%c", opcode, bytes[0], bytes[1], bytes[2], bytes[3]);
 			}
 			break;
@@ -404,8 +405,8 @@ extern int readvm_src(FILE *output, FILE *input) {
 				*ptr = '\0';
 				num1 = atoi(arg);
 				num2 = atoi(arg2);
-				split_32bits_to_8bits(num1, bytes);
-				split_32bits_to_8bits(num2, bytes+4);
+				split_32bits_to_8bits((uint32_t)num1, bytes);
+				split_32bits_to_8bits((uint32_t)num2, bytes+4);
 				fprintf(output, "%c%c%c%c%c%c%c%c%c", opcode,
 					bytes[0], bytes[1], bytes[2], bytes[3],
 					bytes[4], bytes[5], bytes[6], bytes[7]);
@@ -421,16 +422,18 @@ extern int readvm_src(FILE *output, FILE *input) {
 
 static char *readcode(char *line, uint8_t *opcode) {
 	char *ptr;
-
+	// pass spaces
 	ptr = line;
 	while(isspace(*ptr)) {
 		++ptr;
 	}
+	// read chars of opcode
 	line = ptr;
-	while(!_isspace(*ptr)) {
+	while(!isspace(*ptr)) {
 		++ptr;
 	}
 	*ptr = '\0';
+	// get opcode int
 	*opcode = PASS_CODE;
 	for (int i = 0; i < OLIST_SIZE; ++i) {
 		if (strcmp(line, opcodelist[i]) == 0) {
@@ -438,6 +441,7 @@ static char *readcode(char *line, uint8_t *opcode) {
 			break;
 		}
 	}
+	// pass if opcode without arguments 
 	switch(*opcode) {
 		case PASS_CODE:
 		case POP_CODE:
@@ -451,46 +455,39 @@ static char *readcode(char *line, uint8_t *opcode) {
 			return line;
 		default: ;
 	}
-
+	// pass spaces
 	++ptr;
 	while(isspace(*ptr)) {
 		++ptr;
 	}
-
+	// read chars of first argument
 	line = ptr;
-	while(!_isspace(*ptr)) {
+	while(!isspace(*ptr)) {
 		++ptr;
 	}
 	*ptr = '\0';
 	return line;
 }
 
-static int32_t join_8bits_to_32bits(uint8_t *bytes) {
-	int32_t num;
+static uint32_t join_8bits_to_32bits(uint8_t *bytes) {
+	uint32_t num;
 	for (uint8_t *ptr = bytes; ptr < bytes + 4; ++ptr) {
 		num = (num << 8) | *ptr;
 	}
 	return num;
 }
 
-static void split_32bits_to_8bits(int32_t num, uint8_t *bytes) {
+static void split_32bits_to_8bits(uint32_t num, uint8_t *bytes) {
 	for (int i = 0; i < 4; ++i) {
 		bytes[i] = (uint8_t)(num >> (24 - i * 8));
 	}
 }
 
-static _Bool strnull(char *str) {
+static int strnull(char *str) {
 	while(isspace(*str)) {
 		++str;
 	}
 	if(*str == '\0') {
-		return 1;
-	}
-	return 0;
-}
-
-static _Bool _isspace(char ch) {
-	if (ch == '\0' || isspace(ch)) {
 		return 1;
 	}
 	return 0;

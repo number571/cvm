@@ -1,36 +1,29 @@
 ; Sum
-label begin
+    alloc 2
     ; A <-
     push 10
-    call sum
-    jmp end
-label end
-    ; <- A 
+    store 0 -1
+    store 1 -1
     pop
-    hlt
-; A <- sum(A)
-label sum
-    ; B <- A
-    load -2
-label _sum
+label _fact
     ; IF B < 1
-    load -1
+    load 1
     push 1
     jl _end
     ; B <- B - 1
-    load -1
+    load 1
     push 1
     sub
-    store -2 -1
+    store 1 -1
     pop
-    ; A <- A + B
-    load -3
-    load -2
+    ; A <- A * B
+    load 0
+    load 1
     add
-    store -4 -1
+    store 0 -1
     pop
-    jmp _sum
+    jmp _fact
 label _end
-    ; return
+    ; <- A
+    load 0
     pop
-    ret
