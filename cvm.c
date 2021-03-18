@@ -77,7 +77,7 @@ static int compilevm_src(const char *outputf, const char *inputf) {
     int res = readvm_src(output, input);
     fclose(input);
     fclose(output);
-    if (res != 0) {
+    if (res != NONE_ERR) {
         return COMPILE_ERR;
     }
     return NONE_ERR;

@@ -1,7 +1,7 @@
 # VirtualMachine
 > Stack-based virtual machine.
 
-### Instructions (num = 17)
+### Instructions (num = 16)
 1.  [0x00] "push"  
 2.  [0x01] "pop"   
 3.  [0x02] "add"   
@@ -12,13 +12,12 @@
 8.  [0x07] "jl"    
 9.  [0x08] "jg"    
 10. [0x09] "je"    
-11. [0x0A] "jne"   
-12. [0x0B] "store" 
-13. [0x0C] "load"  
-14. [0x0D] "call"  
-15. [0x0E] "ret"   
-16. [0x0F] "hlt"  
-17. [0x10] "alloc"
+11. [0x0A] "store" 
+12. [0x0B] "load"  
+13. [0x0C] "call"  
+14. [0x0D] "ret"   
+15. [0x0E] "hlt"   
+16. [0x0F] "alloc" 
 
 ### Pseudo instructions (num = 2)
 1. "label"
@@ -37,29 +36,30 @@ extern int readvm_exc(FILE *input, int *result);
 $ make install
 $ make build
 $ make run
+> 3628800
 ```
 
 ### Input .File main.vms
 ```asm
 ; Factorial
 label begin
-    ; A
+    ; A <-
     push 10
     call fact
     jmp end
 label end
-    ; A
+    ; <- A
     pop
     hlt
 ; A <- fact(A)
 label fact
     ; B <- A
     load -2
-    ; if B < 2
+label _fact
+    ; IF B < 2
     load -1
     push 2
-    jl _clfact
-label _fact
+    jl _end
     ; B <- B - 1
     load -1
     push 1
@@ -72,22 +72,20 @@ label _fact
     mul
     store -4 -1
     pop
-    ; if B > 1
-    load -1
-    push 1
-    jg _fact
-label _clfact
+    jmp _fact
+label _end
     ; return
     pop
     ret
+
 ```
 
 ### Output .File main.vme
 ```
-0000 0000 0a0d 0000 0011 0600 0000 0f01
-0f0c ffff fffe 0cff ffff ff00 0000 0002
-0700 0000 5e0c ffff ffff 0000 0000 0103
-0bff ffff feff ffff ff01 0cff ffff fd0c
-ffff fffe 040b ffff fffc ffff ffff 010c
-ffff ffff 0000 0000 0108 0000 0025 010e
+0000 0000 0a0c 0000 0011 0600 0000 0f01
+0e0b ffff fffe 0bff ffff ff00 0000 0002
+0700 0000 540b ffff ffff 0000 0000 0103
+0aff ffff feff ffff ff01 0bff ffff fd0b
+ffff fffe 040a ffff fffc ffff ffff 0106
+0000 0016 010d 
 ```

@@ -1,21 +1,21 @@
-; Factorial
+; Sum
 label begin
     ; A <-
     push 10
-    call fact
+    call sum
     jmp end
 label end
-    ; <- A
+    ; <- A 
     pop
     hlt
-; A <- fact(A)
-label fact
+; A <- sum(A)
+label sum
     ; B <- A
     load -2
-label _fact
-    ; IF B < 2
+label _sum
+    ; IF B < 1
     load -1
-    push 2
+    push 1
     jl _end
     ; B <- B - 1
     load -1
@@ -23,13 +23,13 @@ label _fact
     sub
     store -2 -1
     pop
-    ; A <- A * B
+    ; A <- A + B
     load -3
     load -2
-    mul
+    add
     store -4 -1
     pop
-    jmp _fact
+    jmp _sum
 label _end
     ; return
     pop

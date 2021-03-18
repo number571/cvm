@@ -7,7 +7,7 @@
 #include "extclib/type/hashtab.h"
 #include "extclib/type/stack.h"
 
-#define OLIST_SIZE 19
+#define OLIST_SIZE 18
 #define STACK_SIZE 5000
 
 enum {
@@ -21,16 +21,15 @@ enum {
 	JL_CODE      = 7,
 	JG_CODE      = 8,
 	JE_CODE      = 9,
-	JNE_CODE     = 10,
-	STORE_CODE   = 11,
-	LOAD_CODE    = 12,
-	CALL_CODE    = 13,
-	RET_CODE     = 14,
-	HLT_CODE     = 15,
-	ALLOC_CODE   = 16,
-	LABEL_CODE   = 17,
-	COMMENT_CODE = 18,
-	PASS_CODE    = 19,
+	STORE_CODE   = 10,
+	LOAD_CODE    = 11,
+	CALL_CODE    = 12,
+	RET_CODE     = 13,
+	HLT_CODE     = 14,
+	ALLOC_CODE   = 15,
+	LABEL_CODE   = 16,
+	COMMENT_CODE = 17,
+	PASS_CODE    = 18,
 };
 
 static const char *opcodelist[OLIST_SIZE] = {
@@ -44,7 +43,6 @@ static const char *opcodelist[OLIST_SIZE] = {
 	[JL_CODE]      = "jl",
 	[JG_CODE]      = "jg",
 	[JE_CODE]      = "je",
-	[JNE_CODE]     = "jne",
 	[STORE_CODE]   = "store",
 	[LOAD_CODE]    = "load",
 	[CALL_CODE]    = "call",
@@ -93,7 +91,7 @@ extern int readvm_exc(FILE *input, int *result) {
 				int32_t num;
 				uint8_t bytes[4];
 				if (stack_size(stack) == STACK_SIZE) {
-					return -1;
+					return 1;
 				}
 				fscanf(input, "%c%c%c%c", &bytes[0], &bytes[1], &bytes[2], &bytes[3]);
 				num = join_8bits_to_32bits(bytes);
@@ -103,7 +101,7 @@ extern int readvm_exc(FILE *input, int *result) {
 			case POP_CODE: {
 				int32_t *temp;
 				if (stack_size(stack) == 0) {
-					return -2;
+					return 2;
 				}
 				temp = stack_pop(stack);
 				*result = *temp;
@@ -113,7 +111,7 @@ extern int readvm_exc(FILE *input, int *result) {
 				int32_t *temp;
 				int32_t x, y;
 				if (stack_size(stack) <= 1) {
-					return -3;
+					return 3;
 				}
 				temp = stack_pop(stack);
 				x = *temp;
@@ -146,36 +144,36 @@ extern int readvm_exc(FILE *input, int *result) {
 				if (num < 0) {
 					int32_t pos = stack_size(stack) + num;
 					if (pos < 0) {
-						return -4;
+						return 4;
 					}
 					temp = stack_get(stack, pos);
 					num = *temp;
 				}
 				if (num >= fsize) {
-					return -5;
+					return 5;
 				}
 				fseek(input, num, SEEK_SET);
 			}
 			break;
-			case JL_CODE: case JG_CODE: case JE_CODE: case JNE_CODE: {
+			case JL_CODE: case JG_CODE: case JE_CODE: {
 				uint8_t bytes[4];
 				int32_t *temp;
 				int32_t num, pos, x, y;
 				if (stack_size(stack) <= 1) {
-					return -6;
+					return 6;
 				}
 				fscanf(input, "%c%c%c%c", &bytes[0], &bytes[1], &bytes[2], &bytes[3]);
 				num = join_8bits_to_32bits(bytes);
 				if (num < 0) {
 					pos = stack_size(stack) + num;
 					if (pos < 0) {
-						return -7;
+						return 7;
 					}
 					temp = stack_get(stack, pos);
 					num = *temp;
 				}
 				if (num >= fsize) {
-					return -8;
+					return 8;
 				}
 				temp = stack_pop(stack);
 				x = *temp;
@@ -197,11 +195,6 @@ extern int readvm_exc(FILE *input, int *result) {
 							fseek(input, num, SEEK_SET);
 						}
 					break;
-					case JNE_CODE:
-						if (y != x) {
-							fseek(input, num, SEEK_SET);
-						}
-					break;
 					default: ;
 				}
 			}
@@ -219,23 +212,23 @@ extern int readvm_exc(FILE *input, int *result) {
 				if (num1 < 0) {
 					pos1 = stack_size(stack) + num1;
 					if (pos1 < 0) {
-						return -9;
+						return 9;
 					}
 				} else {
 					pos1 = num1;
 					if (pos1 >= stack_size(stack)) {
-						return -10;
+						return 10;
 					}
 				}
 				if (num2 < 0) {
 					pos2 = stack_size(stack) + num2;
 					if (pos2 < 0) {
-						return -11;
+						return 11;
 					}
 				} else {
 					pos2 = num2;
 					if (pos2 >= stack_size(stack)) {
-						return -12;
+						return 12;
 					}
 				}
 				temp = stack_get(stack, pos2);
@@ -248,19 +241,19 @@ extern int readvm_exc(FILE *input, int *result) {
 				int32_t *temp;
 				int32_t pos, num;
 				if (stack_size(stack) == STACK_SIZE) {
-					return -13;
+					return 13;
 				}
 				fscanf(input, "%c%c%c%c", &bytes[0], &bytes[1], &bytes[2], &bytes[3]);
 				num = join_8bits_to_32bits(bytes);
 				if (num < 0) {
 					pos = stack_size(stack) + num;
 					if (pos < 0) {
-						return -14;
+						return 14;
 					}
 				} else {
 					pos = num;
 					if (pos >= stack_size(stack)) {
-						return -15;
+						return 15;
 					}
 				}
 				temp = stack_get(stack, pos);
@@ -273,20 +266,20 @@ extern int readvm_exc(FILE *input, int *result) {
 				int32_t *temp;
 				int32_t num, pos;
 				if (stack_size(stack) == STACK_SIZE) {
-					return -16;
+					return 16;
 				}
 				fscanf(input, "%c%c%c%c", &bytes[0], &bytes[1], &bytes[2], &bytes[3]);
 				num = join_8bits_to_32bits(bytes);
 				if (num < 0) {
 					int32_t pos = stack_size(stack) + num;
 					if (pos < 0) {
-						return -17;
+						return 17;
 					}
 					temp = stack_get(stack, pos);
 					num = *temp;
 				}
 				if (num >= fsize) {
-					return -18;
+					return 18;
 				}
 				pos = ftell(input);
 				stack_push(stack, &pos);
@@ -297,7 +290,7 @@ extern int readvm_exc(FILE *input, int *result) {
 				int32_t *temp;
 				int32_t num;
 				if (stack_size(stack) == 0) {
-					return -19;
+					return 19;
 				}
 				temp = stack_pop(stack);
 				num = *temp;
@@ -345,7 +338,7 @@ extern int readvm_src(FILE *output, FILE *input) {
 				curr_pos += 1;
 			break;
 			case PUSH_CODE: case JMP_CODE: case JL_CODE: case JG_CODE: case JE_CODE:
-			case JNE_CODE: case LOAD_CODE: case CALL_CODE: case ALLOC_CODE:
+			case LOAD_CODE: case CALL_CODE: case ALLOC_CODE:
 				curr_pos += 5;
 			break;
 			case STORE_CODE:
@@ -374,7 +367,7 @@ extern int readvm_src(FILE *output, FILE *input) {
 			}
 			break;
 			case PUSH_CODE: case JMP_CODE: case JL_CODE: case JG_CODE: case JE_CODE: 
-			case JNE_CODE: case CALL_CODE: {
+			case CALL_CODE: {
 				uint8_t bytes[4];
 				int32_t *temp;
 				int32_t num;

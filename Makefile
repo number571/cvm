@@ -8,9 +8,9 @@ default: build run
 install:
 	git clone https://github.com/number571/extclib.git || true
 	make -C extclib/
-build:
+build: $(FILES)
 	$(CC) -o cvm $(CFLAGS) $(FILES)
-run:
+run: cvm main.vms
 	./cvm build main.vms -o main.vme
 	./cvm run main.vme
 clean:
