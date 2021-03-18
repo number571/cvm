@@ -1,0 +1,36 @@
+label begin
+    push 30
+    push 4
+    call div
+    pop
+    jmp end
+label end
+    pop
+    hlt
+
+; A <- div(A, B)
+label div
+    ; Q
+    push 0
+label _div_for
+    ; IF A < B
+    load -4
+    load -4
+    jl _div_end
+    ; Q <- Q + 1
+    load -1
+    push 1
+    add
+    store -2 -1
+    pop
+    ; A <- A - B
+    load -4
+    load -4
+    sub
+    store -5 -1
+    pop
+    jmp _div_for
+label _div_end
+    store -4 -1
+    pop
+    ret

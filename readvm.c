@@ -7,7 +7,7 @@
 #include "extclib/type/hashtab.h"
 #include "extclib/type/stack.h"
 
-#define OLIST_SIZE 18
+#define OLIST_SIZE 16
 #define STACK_SIZE 5000
 
 enum {
@@ -15,21 +15,19 @@ enum {
 	POP_CODE     = 1,
 	ADD_CODE     = 2,
 	SUB_CODE     = 3,
-	MUL_CODE     = 4,
-	DIV_CODE     = 5,
-	JMP_CODE     = 6,
-	JL_CODE      = 7,
-	JG_CODE      = 8,
-	JE_CODE      = 9,
-	STORE_CODE   = 10,
-	LOAD_CODE    = 11,
-	CALL_CODE    = 12,
-	RET_CODE     = 13,
-	HLT_CODE     = 14,
-	ALLOC_CODE   = 15,
-	LABEL_CODE   = 16,
-	COMMENT_CODE = 17,
-	PASS_CODE    = 18,
+	JMP_CODE     = 4,
+	JL_CODE      = 5,
+	JG_CODE      = 6,
+	JE_CODE      = 7,
+	STORE_CODE   = 8,
+	LOAD_CODE    = 9,
+	CALL_CODE    = 10,
+	RET_CODE     = 11,
+	HLT_CODE     = 12,
+	ALLOC_CODE   = 13,
+	LABEL_CODE   = 14,
+	COMMENT_CODE = 15,
+	PASS_CODE    = 16,
 };
 
 static const char *opcodelist[OLIST_SIZE] = {
@@ -37,8 +35,6 @@ static const char *opcodelist[OLIST_SIZE] = {
 	[POP_CODE]     = "pop",
 	[ADD_CODE]     = "add",
 	[SUB_CODE]     = "sub",
-	[MUL_CODE]     = "mul",
-	[DIV_CODE]     = "div",
 	[JMP_CODE]     = "jmp",
 	[JL_CODE]      = "jl",
 	[JG_CODE]      = "jg",
@@ -61,6 +57,7 @@ static char *readcode(char *line, uint8_t *opcode);
 static uint32_t join_8bits_to_32bits(uint8_t *bytes);
 static void split_32bits_to_8bits(uint32_t num, uint8_t *bytes);
 
+static char *strtolower(char *str);
 static int strnull(char *str);
 
 extern int readvm_exc(FILE *input, int *result) {
@@ -78,13 +75,13 @@ extern int readvm_exc(FILE *input, int *result) {
 		fscanf(input, "%c", &opcode);
 		switch(opcode) {
 			case ALLOC_CODE: {
-				int32_t num;
-				int32_t null = 0;
+				int32_t num, pad;
 				uint8_t bytes[4];
 				fscanf(input, "%c%c%c%c", &bytes[0], &bytes[1], &bytes[2], &bytes[3]);
 				num = (int32_t)join_8bits_to_32bits(bytes);
+				pad = 0x00;
 				for (int i = 0; i < num; ++i) {
-					stack_push(stack, &null);
+					stack_push(stack, &pad);
 				}
 			}
 			break;
@@ -100,36 +97,25 @@ extern int readvm_exc(FILE *input, int *result) {
 			}
 			break;
 			case POP_CODE: {
-				int32_t *temp;
 				if (stack_size(stack) == 0) {
 					return 2;
 				}
-				temp = stack_pop(stack);
-				*result = *temp;
+				*result = *(int32_t*)stack_pop(stack);
 			}
 			break;
-			case ADD_CODE: case SUB_CODE: case MUL_CODE: case DIV_CODE: {
-				int32_t *temp;
+			case ADD_CODE: case SUB_CODE: {
 				int32_t x, y;
 				if (stack_size(stack) <= 1) {
 					return 3;
 				}
-				temp = stack_pop(stack);
-				x = *temp;
-				temp = stack_pop(stack);
-				y = *temp;
+				x = *(int32_t*)stack_pop(stack);
+				y = *(int32_t*)stack_pop(stack);
 				switch(opcode) {
 					case ADD_CODE:
 						y += x;
 					break;
 					case SUB_CODE:
 						y -= x;
-					break;
-					case MUL_CODE:
-						y *= x;
-					break;
-					case DIV_CODE:
-						y /= x;
 					break;
 					default: ;
 				}
@@ -138,7 +124,6 @@ extern int readvm_exc(FILE *input, int *result) {
 			break;
 			case JMP_CODE: {
 				uint8_t bytes[4];
-				int32_t *temp;
 				int32_t num;
 				fscanf(input, "%c%c%c%c", &bytes[0], &bytes[1], &bytes[2], &bytes[3]);
 				num = (int32_t)join_8bits_to_32bits(bytes);
@@ -147,8 +132,7 @@ extern int readvm_exc(FILE *input, int *result) {
 					if (pos < 0) {
 						return 4;
 					}
-					temp = stack_get(stack, pos);
-					num = *temp;
+					num = *(int32_t*)stack_get(stack, pos);
 				}
 				if (num >= fsize) {
 					return 5;
@@ -158,7 +142,6 @@ extern int readvm_exc(FILE *input, int *result) {
 			break;
 			case JL_CODE: case JG_CODE: case JE_CODE: {
 				uint8_t bytes[4];
-				int32_t *temp;
 				int32_t num, pos, x, y;
 				if (stack_size(stack) <= 1) {
 					return 6;
@@ -170,16 +153,13 @@ extern int readvm_exc(FILE *input, int *result) {
 					if (pos < 0) {
 						return 7;
 					}
-					temp = stack_get(stack, pos);
-					num = *temp;
+					num = *(int32_t*)stack_get(stack, pos);
 				}
 				if (num >= fsize) {
 					return 8;
 				}
-				temp = stack_pop(stack);
-				x = *temp;
-				temp = stack_pop(stack);
-				y = *temp;
+				x = *(int32_t*)stack_pop(stack);
+				y = *(int32_t*)stack_pop(stack);
 				switch(opcode) {
 					case JL_CODE:
 						if (y < x) {
@@ -202,7 +182,6 @@ extern int readvm_exc(FILE *input, int *result) {
 			break;
 			case STORE_CODE: {
 				uint8_t bytes[8];
-				int32_t *temp;
 				int32_t num1, num2;
 				int32_t pos1, pos2;
 				fscanf(input, "%c%c%c%c%c%c%c%c", 
@@ -232,14 +211,12 @@ extern int readvm_exc(FILE *input, int *result) {
 						return 12;
 					}
 				}
-				temp = stack_get(stack, pos2);
-				num2 = *temp;
+				num2 = *(int32_t*)stack_get(stack, pos2);
 				stack_set(stack, pos1, &num2);
 			}
 			break;
 			case LOAD_CODE: {
 				uint8_t bytes[4];
-				int32_t *temp;
 				int32_t pos, num;
 				if (stack_size(stack) == STACK_SIZE) {
 					return 13;
@@ -257,14 +234,12 @@ extern int readvm_exc(FILE *input, int *result) {
 						return 15;
 					}
 				}
-				temp = stack_get(stack, pos);
-				num = *temp;
+				num = *(int32_t*)stack_get(stack, pos);
 				stack_push(stack, &num);
 			}
 			break;
 			case CALL_CODE: {
 				uint8_t bytes[4];
-				int32_t *temp;
 				int32_t num, pos;
 				if (stack_size(stack) == STACK_SIZE) {
 					return 16;
@@ -276,8 +251,7 @@ extern int readvm_exc(FILE *input, int *result) {
 					if (pos < 0) {
 						return 17;
 					}
-					temp = stack_get(stack, pos);
-					num = *temp;
+					num = *(int32_t*)stack_get(stack, pos);
 				}
 				if (num >= fsize) {
 					return 18;
@@ -288,13 +262,11 @@ extern int readvm_exc(FILE *input, int *result) {
 			}
 			break;
 			case RET_CODE: {
-				int32_t *temp;
 				int32_t num;
 				if (stack_size(stack) == 0) {
 					return 19;
 				}
-				temp = stack_pop(stack);
-				num = *temp;
+				num = *(int32_t*)stack_pop(stack);
 				fseek(input, num, SEEK_SET);
 			}
 			break;
@@ -334,12 +306,12 @@ extern int readvm_src(FILE *output, FILE *input) {
 			continue;
 		}
 		switch(opcode) {
-			case POP_CODE: case ADD_CODE: case SUB_CODE: case MUL_CODE: case DIV_CODE:
+			case POP_CODE: case ADD_CODE: case SUB_CODE: 
 			case RET_CODE: case HLT_CODE:
 				curr_pos += 1;
 			break;
-			case PUSH_CODE: case JMP_CODE: case JL_CODE: case JG_CODE: case JE_CODE:
-			case LOAD_CODE: case CALL_CODE: case ALLOC_CODE:
+			case PUSH_CODE: case JMP_CODE: case JL_CODE: case JG_CODE:
+			case JE_CODE: case LOAD_CODE: case CALL_CODE: case ALLOC_CODE:
 				curr_pos += 5;
 			break;
 			case STORE_CODE:
@@ -362,21 +334,21 @@ extern int readvm_src(FILE *output, FILE *input) {
 	while(fgets(buffer, BUFSIZ, input) != NULL) {
 		arg = readcode(buffer, &opcode);
 		switch (opcode) {
-			case POP_CODE: case ADD_CODE: case SUB_CODE: case MUL_CODE: case DIV_CODE:
+			case POP_CODE: case ADD_CODE: case SUB_CODE: 
 			case RET_CODE: case HLT_CODE: {
 				fprintf(output, "%c", opcode);
 			}
 			break;
-			case PUSH_CODE: case JMP_CODE: case JL_CODE: case JG_CODE: case JE_CODE: 
-			case CALL_CODE: {
+			case PUSH_CODE: case JMP_CODE: case JL_CODE: case JG_CODE:
+			case JE_CODE: case CALL_CODE: {
 				uint8_t bytes[4];
 				int32_t *temp;
 				int32_t num;
 				temp = hashtab_select(hashtab, arg);
-				if (temp != NULL) {
-					num = *temp;
-				} else {
+				if (temp == NULL) {
 					num = atoi(arg);
+				} else {
+					num = *temp;
 				}
 				split_32bits_to_8bits((uint32_t)num, bytes);
 				fprintf(output, "%c%c%c%c%c", opcode, bytes[0], bytes[1], bytes[2], bytes[3]);
@@ -436,7 +408,7 @@ static char *readcode(char *line, uint8_t *opcode) {
 	// get opcode int
 	*opcode = PASS_CODE;
 	for (int i = 0; i < OLIST_SIZE; ++i) {
-		if (strcmp(line, opcodelist[i]) == 0) {
+		if (strcmp(strtolower(line), opcodelist[i]) == 0) {
 			*opcode = i;
 			break;
 		}
@@ -449,9 +421,7 @@ static char *readcode(char *line, uint8_t *opcode) {
 		case RET_CODE:
 		case HLT_CODE:
 		case ADD_CODE:
-		case SUB_CODE: 
-		case MUL_CODE:
-		case DIV_CODE:
+		case SUB_CODE:
 			return line;
 		default: ;
 	}
@@ -481,6 +451,14 @@ static void split_32bits_to_8bits(uint32_t num, uint8_t *bytes) {
 	for (int i = 0; i < 4; ++i) {
 		bytes[i] = (uint8_t)(num >> (24 - i * 8));
 	}
+}
+
+static char *strtolower(char *str) {
+	int len = strlen(str);
+	for (int i = 0; i < len; ++i) {
+		str[i] = tolower(str[i]);
+	}
+	return str;
 }
 
 static int strnull(char *str) {

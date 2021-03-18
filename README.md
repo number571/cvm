@@ -1,23 +1,21 @@
 # VirtualMachine
 > Stack-based virtual machine.
 
-### Instructions (num = 16)
+### Instructions (num = 14)
 1.  [0x00] "push"  
 2.  [0x01] "pop"   
 3.  [0x02] "add"   
 4.  [0x03] "sub"   
-5.  [0x04] "mul"   
-6.  [0x05] "div"   
-7.  [0x06] "jmp"   
-8.  [0x07] "jl"    
-9.  [0x08] "jg"    
-10. [0x09] "je"    
-11. [0x0A] "store" 
-12. [0x0B] "load"  
-13. [0x0C] "call"  
-14. [0x0D] "ret"   
-15. [0x0E] "hlt"   
-16. [0x0F] "alloc" 
+5.  [0x04] "jmp"   
+6.  [0x05] "jl"    
+7.  [0x06] "jg"    
+8.  [0x07] "jr"  
+9.  [0x08] "store" 
+10. [0x09] "load"  
+11. [0x0A] "call"  
+12. [0x0B] "ret"   
+13. [0x0C] "hlt"   
+14. [0x0D] "alloc" 
 
 ### Pseudo instructions (num = 2)
 1. "label"
@@ -41,25 +39,23 @@ $ make run
 
 ### Input .File main.vms
 ```asm
-; Factorial
 label begin
-    ; A <-
     push 10
     call fact
     jmp end
 label end
-    ; <- A
     pop
     hlt
+
 ; A <- fact(A)
 label fact
     ; B <- A
     load -2
-label _fact
+label _fact_for
     ; IF B < 2
     load -1
     push 2
-    jl _end
+    jl _fact_end
     ; B <- B - 1
     load -1
     push 1
@@ -69,23 +65,53 @@ label _fact
     ; A <- A * B
     load -3
     load -2
-    mul
+    call mul
+    pop
     store -4 -1
     pop
-    jmp _fact
-label _end
+    jmp _fact_for
+label _fact_end
     ; return
     pop
     ret
 
+; A <- mul(A, B)
+label mul
+    ; A'
+    load -3
+label _mul_for
+    ; IF B < 2
+    load -3
+    push 2
+    jl _mul_end
+    ; B <- B - 1
+    load -3
+    push 1
+    sub
+    store -4 -1
+    pop
+    ; A <- A + A'
+    load -4
+    load -2
+    add
+    store -5 -1
+    pop
+    jmp _mul_for
+label _mul_end
+    pop
+    ret
 ```
 
 ### Output .File main.vme
 ```
-0000 0000 0a0c 0000 0011 0600 0000 0f01
-0e0b ffff fffe 0bff ffff ff00 0000 0002
-0700 0000 540b ffff ffff 0000 0000 0103
-0aff ffff feff ffff ff01 0bff ffff fd0b
-ffff fffe 040a ffff fffc ffff ffff 0106
-0000 0016 010d 
+0000 0000 0a0a 0000 0011 0400 0000 0f01
+0c09 ffff fffe 09ff ffff ff00 0000 0002
+0500 0000 5909 ffff ffff 0000 0000 0103
+08ff ffff feff ffff ff01 09ff ffff fd09
+ffff fffe 0a00 0000 5b01 08ff ffff fcff
+ffff ff01 0400 0000 1601 0b09 ffff fffd
+09ff ffff fd00 0000 0002 0500 0000 9e09
+ffff fffd 0000 0000 0103 08ff ffff fcff
+ffff ff01 09ff ffff fc09 ffff fffe 0208
+ffff fffb ffff ffff 0104 0000 0060 010b
 ```

@@ -84,7 +84,7 @@ static int compilevm_src(const char *outputf, const char *inputf) {
 }
 
 static int runvm_exc(const char *filename, int *result) {
-    FILE *input = fopen(filename, "r");
+    FILE *input = fopen(filename, "rb");
     if (input == NULL) {
         return INOPEN_ERR;
     }

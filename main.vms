@@ -1,22 +1,20 @@
-; Factorial
 label begin
-    ; A <-
     push 10
     call fact
     jmp end
 label end
-    ; <- A
     pop
     hlt
+
 ; A <- fact(A)
 label fact
     ; B <- A
     load -2
-label _fact
+label _fact_for
     ; IF B < 2
     load -1
     push 2
-    jl _end
+    jl _fact_end
     ; B <- B - 1
     load -1
     push 1
@@ -26,11 +24,38 @@ label _fact
     ; A <- A * B
     load -3
     load -2
-    mul
+    call mul
+    pop
     store -4 -1
     pop
-    jmp _fact
-label _end
+    jmp _fact_for
+label _fact_end
     ; return
+    pop
+    ret
+
+; A <- mul(A, B)
+label mul
+    ; A'
+    load -3
+label _mul_for
+    ; IF B < 2
+    load -3
+    push 2
+    jl _mul_end
+    ; B <- B - 1
+    load -3
+    push 1
+    sub
+    store -4 -1
+    pop
+    ; A <- A + A'
+    load -4
+    load -2
+    add
+    store -5 -1
+    pop
+    jmp _mul_for
+label _mul_end
     pop
     ret

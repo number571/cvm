@@ -10,7 +10,7 @@ install:
 	make -C extclib/
 build: $(FILES)
 	$(CC) -o cvm $(CFLAGS) $(FILES)
-run: cvm main.vms
+run:
 	./cvm build main.vms -o main.vme
 	./cvm run main.vme
 clean:
