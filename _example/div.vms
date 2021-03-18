@@ -3,7 +3,8 @@ label begin
     push 4
     call div
     pop
-    jmp end
+    alloc 2
+    je end
 label end
     pop
     hlt
@@ -29,7 +30,8 @@ label _div_for
     sub
     store -5 -1
     pop
-    jmp _div_for
+    alloc 2
+    je _div_for
 label _div_end
     store -4 -1
     pop

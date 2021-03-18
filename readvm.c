@@ -7,7 +7,7 @@
 #include "extclib/type/hashtab.h"
 #include "extclib/type/stack.h"
 
-#define OLIST_SIZE 16
+#define ILIST_SIZE 15
 #define STACK_SIZE 5000
 
 enum {
@@ -15,27 +15,25 @@ enum {
 	POP_CODE     = 1,
 	ADD_CODE     = 2,
 	SUB_CODE     = 3,
-	JMP_CODE     = 4,
-	JL_CODE      = 5,
-	JG_CODE      = 6,
-	JE_CODE      = 7,
-	STORE_CODE   = 8,
-	LOAD_CODE    = 9,
-	CALL_CODE    = 10,
-	RET_CODE     = 11,
-	HLT_CODE     = 12,
-	ALLOC_CODE   = 13,
-	LABEL_CODE   = 14,
-	COMMENT_CODE = 15,
-	PASS_CODE    = 16,
+	JL_CODE      = 4,
+	JG_CODE      = 5,
+	JE_CODE      = 6,
+	STORE_CODE   = 7,
+	LOAD_CODE    = 8,
+	CALL_CODE    = 9,
+	RET_CODE     = 10,
+	HLT_CODE     = 11,
+	ALLOC_CODE   = 12,
+	LABEL_CODE   = 13,
+	COMMENT_CODE = 14,
+	PASS_CODE    = 15,
 };
 
-static const char *opcodelist[OLIST_SIZE] = {
+static const char *opcodelist[ILIST_SIZE] = {
 	[PUSH_CODE]    = "push",
 	[POP_CODE]     = "pop",
 	[ADD_CODE]     = "add",
 	[SUB_CODE]     = "sub",
-	[JMP_CODE]     = "jmp",
 	[JL_CODE]      = "jl",
 	[JG_CODE]      = "jg",
 	[JE_CODE]      = "je",
@@ -120,24 +118,6 @@ extern int readvm_exc(FILE *input, int *result) {
 					default: ;
 				}
 				stack_push(stack, &y);
-			}
-			break;
-			case JMP_CODE: {
-				uint8_t bytes[4];
-				int32_t num;
-				fscanf(input, "%c%c%c%c", &bytes[0], &bytes[1], &bytes[2], &bytes[3]);
-				num = (int32_t)join_8bits_to_32bits(bytes);
-				if (num < 0) {
-					int32_t pos = stack_size(stack) + num;
-					if (pos < 0) {
-						return 4;
-					}
-					num = *(int32_t*)stack_get(stack, pos);
-				}
-				if (num >= fsize) {
-					return 5;
-				}
-				fseek(input, num, SEEK_SET);
 			}
 			break;
 			case JL_CODE: case JG_CODE: case JE_CODE: {
@@ -310,7 +290,7 @@ extern int readvm_src(FILE *output, FILE *input) {
 			case RET_CODE: case HLT_CODE:
 				curr_pos += 1;
 			break;
-			case PUSH_CODE: case JMP_CODE: case JL_CODE: case JG_CODE:
+			case PUSH_CODE: case JL_CODE: case JG_CODE:
 			case JE_CODE: case LOAD_CODE: case CALL_CODE: case ALLOC_CODE:
 				curr_pos += 5;
 			break;
@@ -339,7 +319,7 @@ extern int readvm_src(FILE *output, FILE *input) {
 				fprintf(output, "%c", opcode);
 			}
 			break;
-			case PUSH_CODE: case JMP_CODE: case JL_CODE: case JG_CODE:
+			case PUSH_CODE: case JL_CODE: case JG_CODE:
 			case JE_CODE: case CALL_CODE: {
 				uint8_t bytes[4];
 				int32_t *temp;
@@ -407,7 +387,7 @@ static char *readcode(char *line, uint8_t *opcode) {
 	*ptr = '\0';
 	// get opcode int
 	*opcode = PASS_CODE;
-	for (int i = 0; i < OLIST_SIZE; ++i) {
+	for (int i = 0; i < ILIST_SIZE; ++i) {
 		if (strcmp(strtolower(line), opcodelist[i]) == 0) {
 			*opcode = i;
 			break;

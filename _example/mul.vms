@@ -3,7 +3,8 @@ label begin
     push 3
     call mul
     pop
-    jmp end
+    alloc 2
+    je end
 label end
     pop
     hlt
@@ -29,7 +30,8 @@ label _mul_for
     add
     store -5 -1
     pop
-    jmp _mul_for
+    alloc 2
+    je _mul_for
 label _mul_end
     pop
     ret

@@ -22,7 +22,8 @@ label _fact
     add
     store 0 -1
     pop
-    jmp _fact
+    alloc 2
+    je _fact
 label _end
     ; <- A
     load 0

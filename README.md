@@ -1,21 +1,20 @@
 # VirtualMachine
 > Stack-based virtual machine.
 
-### Instructions (num = 14)
+### Instructions (num = 13)
 1.  [0x00] "push"  
 2.  [0x01] "pop"   
 3.  [0x02] "add"   
 4.  [0x03] "sub"   
-5.  [0x04] "jmp"   
-6.  [0x05] "jl"    
-7.  [0x06] "jg"    
-8.  [0x07] "jr"  
-9.  [0x08] "store" 
-10. [0x09] "load"  
-11. [0x0A] "call"  
-12. [0x0B] "ret"   
-13. [0x0C] "hlt"   
-14. [0x0D] "alloc" 
+5.  [0x04] "jl"    
+6.  [0x05] "jg"    
+7.  [0x06] "je"    
+8.  [0x07] "store" 
+9.  [0x08] "load"  
+10. [0x09] "call"  
+11. [0x0A] "ret"   
+12. [0x0B] "hlt"   
+13. [0x0C] "alloc" 
 
 ### Pseudo instructions (num = 2)
 1. "label"
@@ -42,7 +41,8 @@ $ make run
 label begin
     push 10
     call fact
-    jmp end
+    alloc 2
+    je end
 label end
     pop
     hlt
@@ -69,7 +69,8 @@ label _fact_for
     pop
     store -4 -1
     pop
-    jmp _fact_for
+    alloc 2
+    je _fact_for
 label _fact_end
     ; return
     pop
@@ -96,7 +97,8 @@ label _mul_for
     add
     store -5 -1
     pop
-    jmp _mul_for
+    alloc 2
+    je _mul_for
 label _mul_end
     pop
     ret
@@ -104,14 +106,15 @@ label _mul_end
 
 ### Output .File main.vme
 ```
-0000 0000 0a0a 0000 0011 0400 0000 0f01
-0c09 ffff fffe 09ff ffff ff00 0000 0002
-0500 0000 5909 ffff ffff 0000 0000 0103
-08ff ffff feff ffff ff01 09ff ffff fd09
-ffff fffe 0a00 0000 5b01 08ff ffff fcff
-ffff ff01 0400 0000 1601 0b09 ffff fffd
-09ff ffff fd00 0000 0002 0500 0000 9e09
-ffff fffd 0000 0000 0103 08ff ffff fcff
-ffff ff01 09ff ffff fc09 ffff fffe 0208
-ffff fffb ffff ffff 0104 0000 0060 010b
+0000 0000 0a09 0000 0016 0c00 0000 0206
+0000 0014 010b 08ff ffff fe08 ffff ffff
+0000 0000 0204 0000 0063 08ff ffff ff00
+0000 0001 0307 ffff fffe ffff ffff 0108
+ffff fffd 08ff ffff fe09 0000 0065 0107
+ffff fffc ffff ffff 010c 0000 0002 0600
+0000 1b01 0a08 ffff fffd 08ff ffff fd00
+0000 0002 0400 0000 ad08 ffff fffd 0000
+0000 0103 07ff ffff fcff ffff ff01 08ff
+ffff fc08 ffff fffe 0207 ffff fffb ffff
+ffff 010c 0000 0002 0600 0000 6a01 0a
 ```
