@@ -5,7 +5,7 @@
     store 0 -1
     store 1 -1
     pop
-label _fact
+label _sum
     ; IF B < 1
     load 1
     push 1
@@ -16,14 +16,14 @@ label _fact
     sub
     store 1 -1
     pop
-    ; A <- A * B
+    ; A <- A + B
     load 0
     load 1
     add
     store 0 -1
     pop
     alloc 2
-    je _fact
+    je _sum
 label _end
     ; <- A
     load 0

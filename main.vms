@@ -38,7 +38,7 @@ label _fact_end
 
 ; A <- mul(A, B)
 label mul
-    ; A'
+    ; A' <- A
     load -3
 label _mul_for
     ; IF B < 2
