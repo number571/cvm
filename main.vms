@@ -1,7 +1,8 @@
 label begin
     push 10
     call fact
-    alloc 2
+    push 0
+    push 0
     je end
 label end
     pop
@@ -29,7 +30,8 @@ label _fact_for
     pop
     store -4 -1
     pop
-    alloc 2
+    push 0
+    push 0
     je _fact_for
 label _fact_end
     ; return
@@ -57,7 +59,8 @@ label _mul_for
     add
     store -5 -1
     pop
-    alloc 2
+    push 0
+    push 0
     je _mul_for
 label _mul_end
     pop

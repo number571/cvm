@@ -1,7 +1,7 @@
 # VirtualMachine
 > Stack-based virtual machine.
 
-### Instructions (num = 13)
+### Instructions (num = 12)
 1.  [0x00] "push"  
 2.  [0x01] "pop"   
 3.  [0x02] "add"   
@@ -14,7 +14,6 @@
 10. [0x09] "call"  
 11. [0x0A] "ret"   
 12. [0x0B] "hlt"   
-13. [0x0C] "alloc" 
 
 ### Pseudo instructions (num = 2)
 1. "label"
@@ -41,7 +40,8 @@ $ make run
 label begin
     push 10
     call fact
-    alloc 2
+    push 0
+    push 0
     je end
 label end
     pop
@@ -69,7 +69,8 @@ label _fact_for
     pop
     store -4 -1
     pop
-    alloc 2
+    push 0
+    push 0
     je _fact_for
 label _fact_end
     ; return
@@ -78,7 +79,7 @@ label _fact_end
 
 ; A <- mul(A, B)
 label mul
-    ; A'
+    ; A' <- A
     load -3
 label _mul_for
     ; IF B < 2
@@ -97,7 +98,8 @@ label _mul_for
     add
     store -5 -1
     pop
-    alloc 2
+    push 0
+    push 0
     je _mul_for
 label _mul_end
     pop
@@ -106,15 +108,16 @@ label _mul_end
 
 ### Output .File main.vme
 ```
-0000 0000 0a09 0000 0016 0c00 0000 0206
-0000 0014 010b 08ff ffff fe08 ffff ffff
-0000 0000 0204 0000 0063 08ff ffff ff00
-0000 0001 0307 ffff fffe ffff ffff 0108
-ffff fffd 08ff ffff fe09 0000 0065 0107
-ffff fffc ffff ffff 010c 0000 0002 0600
-0000 1b01 0a08 ffff fffd 08ff ffff fd00
-0000 0002 0400 0000 ad08 ffff fffd 0000
-0000 0103 07ff ffff fcff ffff ff01 08ff
-ffff fc08 ffff fffe 0207 ffff fffb ffff
-ffff 010c 0000 0002 0600 0000 6a01 0a
+0000 0000 0a09 0000 001b 0000 0000 0000
+0000 0000 0600 0000 1901 0b08 ffff fffe
+08ff ffff ff00 0000 0002 0400 0000 6d08
+ffff ffff 0000 0000 0103 07ff ffff feff
+ffff ff01 08ff ffff fd08 ffff fffe 0900
+0000 6f01 07ff ffff fcff ffff ff01 0000
+0000 0000 0000 0000 0600 0000 2001 0a08
+ffff fffd 08ff ffff fd00 0000 0002 0400
+0000 bc08 ffff fffd 0000 0000 0103 07ff
+ffff fcff ffff ff01 08ff ffff fc08 ffff
+fffe 0207 ffff fffb ffff ffff 0100 0000
+0000 0000 0000 0006 0000 0074 010a 
 ```

@@ -7,7 +7,7 @@
 #include "extclib/type/hashtab.h"
 #include "extclib/type/stack.h"
 
-#define ILIST_SIZE 15
+#define ILIST_SIZE 14
 #define STACK_SIZE 5000
 
 enum {
@@ -23,10 +23,9 @@ enum {
 	CALL_CODE    = 9,
 	RET_CODE     = 10,
 	HLT_CODE     = 11,
-	ALLOC_CODE   = 12,
-	LABEL_CODE   = 13,
-	COMMENT_CODE = 14,
-	PASS_CODE    = 15,
+	LABEL_CODE   = 12,
+	COMMENT_CODE = 13,
+	PASS_CODE    = 14,
 };
 
 static const char *opcodelist[ILIST_SIZE] = {
@@ -42,7 +41,6 @@ static const char *opcodelist[ILIST_SIZE] = {
 	[CALL_CODE]    = "call",
 	[RET_CODE]     = "ret",
 	[HLT_CODE]     = "hlt",
-	[ALLOC_CODE]   = "alloc",
 	[LABEL_CODE]   = "label",
 	[COMMENT_CODE] = ";",
 };
@@ -72,20 +70,6 @@ extern int readvm_exc(FILE *input, int *result) {
 	while(!feof(input) && ftell(input) < fsize) {
 		fscanf(input, "%c", &opcode);
 		switch(opcode) {
-			case ALLOC_CODE: {
-				int32_t num, pad;
-				uint8_t bytes[4];
-				fscanf(input, "%c%c%c%c", &bytes[0], &bytes[1], &bytes[2], &bytes[3]);
-				num = (int32_t)join_8bits_to_32bits(bytes);
-				pad = 0x00;
-				if (stack_size(stack) + num >= STACK_SIZE) {
-					return 1;
-				}
-				for (int i = 0; i < num; ++i) {
-					stack_push(stack, &pad);
-				}
-			}
-			break;
 			case PUSH_CODE: {
 				int32_t num;
 				uint8_t bytes[4];
@@ -290,7 +274,7 @@ extern int readvm_src(FILE *output, FILE *input) {
 				byte_index += 1;
 			break;
 			case PUSH_CODE: case JL_CODE: case JG_CODE:
-			case JE_CODE: case LOAD_CODE: case CALL_CODE: case ALLOC_CODE:
+			case JE_CODE: case LOAD_CODE: case CALL_CODE:
 				byte_index += 5;
 			break;
 			case STORE_CODE:
@@ -318,7 +302,15 @@ extern int readvm_src(FILE *output, FILE *input) {
 				fprintf(output, "%c", opcode);
 			}
 			break;
-			case PUSH_CODE: case JL_CODE: case JG_CODE:
+			case PUSH_CODE: {
+				uint8_t bytes[4];
+				int32_t num;
+				num = atoi(arg);
+				split_32bits_to_8bits((uint32_t)num, bytes);
+				fprintf(output, "%c%c%c%c%c", opcode, bytes[0], bytes[1], bytes[2], bytes[3]);
+			}
+			break;
+			case LOAD_CODE: case JL_CODE: case JG_CODE:
 			case JE_CODE: case CALL_CODE: {
 				uint8_t bytes[4];
 				int32_t *temp;
@@ -329,14 +321,6 @@ extern int readvm_src(FILE *output, FILE *input) {
 				} else {
 					num = *temp;
 				}
-				split_32bits_to_8bits((uint32_t)num, bytes);
-				fprintf(output, "%c%c%c%c%c", opcode, bytes[0], bytes[1], bytes[2], bytes[3]);
-			}
-			break;
-			case ALLOC_CODE: case LOAD_CODE: {
-				uint8_t bytes[4];
-				int32_t num;
-				num = atoi(arg);
 				split_32bits_to_8bits((uint32_t)num, bytes);
 				fprintf(output, "%c%c%c%c%c", opcode, bytes[0], bytes[1], bytes[2], bytes[3]);
 			}

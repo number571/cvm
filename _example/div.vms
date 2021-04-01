@@ -3,7 +3,8 @@ label begin
     push 4
     call div
     pop
-    alloc 2
+    push 0
+    push 0
     je end
 label end
     pop
@@ -30,7 +31,8 @@ label _div_for
     sub
     store -5 -1
     pop
-    alloc 2
+    push 0
+    push 0
     je _div_for
 label _div_end
     ; A <- Q
