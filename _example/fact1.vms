@@ -1,0 +1,92 @@
+; WITHOUT ADDITIONAL INSTRUCTIONS
+labl begin
+    push 10
+    push fact
+    call
+    push 0
+    push 0
+    push end
+    je
+labl end
+    hlt
+
+; A <- fact(A)
+labl fact
+    ; B <- A
+    push -2
+    load
+labl _fact_for
+    ; IF B < 2
+    push -1
+    load
+    push 2
+    push _fact_end
+    jl
+    ; B <- B - 1
+    push -1
+    load
+    push 1
+    sub
+    push -1
+    push -2
+    stor
+    pop
+    ; A <- A * B
+    push -3
+    load
+    push -2
+    load
+    push mul
+    call
+    pop
+    push -1
+    push -4
+    stor
+    pop
+    push 0
+    push 0
+    push _fact_for
+    je
+labl _fact_end
+    ; return
+    pop
+    ret
+
+; A <- mul(A, B)
+labl mul
+    ; A' <- A
+    push -3
+    load
+labl _mul_for
+    ; IF B < 2
+    push -3
+    load
+    push 2
+    push _mul_end
+    jl
+    ; B <- B - 1
+    push -3
+    load
+    push 1
+    sub
+    push -1
+    push -4
+    stor
+    pop
+    ; A <- A + A'
+    push -4
+    load
+    push -2
+    load
+    add
+    push -1
+    push -5
+    stor
+    pop
+    push 0
+    push 0
+    push _mul_for
+    je
+labl _mul_end
+    pop
+    ret

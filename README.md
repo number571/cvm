@@ -1,123 +1,133 @@
 # VirtualMachine
-> Stack-based virtual machine.
+> Stack-based virtual machine. Version 1.0.0.
 
-### Instructions (num = 12)
-1.  [0x00] "push"  
-2.  [0x01] "pop"   
-3.  [0x02] "add"   
-4.  [0x03] "sub"   
-5.  [0x04] "jl"    
-6.  [0x05] "jg"    
-7.  [0x06] "je"    
-8.  [0x07] "store" 
-9.  [0x08] "load"  
-10. [0x09] "call"  
-11. [0x0A] "ret"   
-12. [0x0B] "hlt"   
+### Pseudo instructions (num = 3)
+1. ""
+2. "labl"
+3. ";"
 
-### Pseudo instructions (num = 2)
-1. "label"
-2. ";"
+### Main instructions (num = 12)
+1.  [0x0A] "push"  
+2.  [0x0B] "pop"   
+3.  [0x0C] "add"   
+4.  [0x0D] "sub"   
+5.  [0x0E] "jl"    
+6.  [0x0F] "jg"    
+7.  [0x1A] "je"    
+8.  [0x1B] "stor" 
+9.  [0x1C] "load"  
+10. [0x1D] "call"  
+11. [0x1E] "ret"   
+12. [0x1F] "hlt"   
+
+### Additional instructions (num = 14)
+1.  [0xA0] "mul"  
+2.  [0xB0] "div"   
+3.  [0xC0] "mod"   
+4.  [0xD0] "shr"   
+5.  [0xE0] "shl"    
+6.  [0xF0] "xor"    
+7.  [0xA1] "and"    
+8.  [0xB1] "or" 
+9.  [0xC1] "not"  
+10. [0xD1] "jmp"  
+11. [0xE1] "jne"   
+12. [0xF1] "jle"   
+13. [0xA2] "jge"   
+14. [0xB2] "allc"   
 
 ### Interface functions
 ```c
-// translate source file (input) into executable (output)
-extern int readvm_src(FILE *output, FILE *input);
-// run executable file
-extern int readvm_exc(FILE *input, int *result);
+extern int cvm_compile(FILE *output, FILE *input);
+extern int cvm_load(uint8_t *memory, int32_t msize);
+extern int cvm_run(int32_t **output, int32_t *input);
 ```
 
 ### Compile and run
 ```
-$ make install
-$ make build
-$ make run
-> 3628800
+$ make 
+> [ 3 24 19 ]
 ```
 
-### Input .File main.vms
+### Example: caesar encryption
 ```asm
-label begin
+labl begin
+    ; A[3] <- (10, 15, 20)
     push 10
-    call fact
-    push 0
-    push 0
-    je end
-label end
+    push 15
+    push 20
+    ; K <- 9
+    push 9
+    ; S <- size(A)
+    push 3
+    push caesar
+    call
+    push end
+    jmp
+labl end
+    pop
     pop
     hlt
 
-; A <- fact(A)
-label fact
-    ; B <- A
-    load -2
-label _fact_for
-    ; IF B < 2
-    load -1
-    push 2
-    jl _fact_end
-    ; B <- B - 1
-    load -1
-    push 1
-    sub
-    store -2 -1
-    pop
-    ; A <- A * B
-    load -3
-    load -2
-    call mul
-    pop
-    store -4 -1
-    pop
+labl caesar
+    ; I = 0
     push 0
-    push 0
-    je _fact_for
-label _fact_end
-    ; return
-    pop
-    ret
+labl caesar_iter
+    ; IF I >= S
+    push -1
+    load
+    push -4
+    load
+    push caesar_exit
+    jge
 
-; A <- mul(A, B)
-label mul
-    ; A' <- A
-    load -3
-label _mul_for
-    ; IF B < 2
-    load -3
-    push 2
-    jl _mul_end
-    ; B <- B - 1
-    load -3
-    push 1
+    ; A' <- (K + A[I]) mod 26
+    push -4
+    load
+    push -6
+    push -3
+    load
     sub
-    store -4 -1
-    pop
-    ; A <- A + A'
-    load -4
-    load -2
+    load
     add
-    store -5 -1
+    push 26
+    mod
+
+    ; A[I] <- A'
+    push -1
+    push -6
+    push -4
+    load
+    sub
+    stor
     pop
-    push 0
-    push 0
-    je _mul_for
-label _mul_end
+
+    ; I <- I + 1
+    push -1
+    load
+    push 1
+    add
+    push -1
+    push -2
+    stor
+    pop
+
+    push caesar_iter
+    jmp 
+labl caesar_exit
     pop
     ret
 ```
 
 ### Output .File main.vme
 ```
-0000 0000 0a09 0000 001b 0000 0000 0000
-0000 0000 0600 0000 1901 0b08 ffff fffe
-08ff ffff ff00 0000 0002 0400 0000 6d08
-ffff ffff 0000 0000 0103 07ff ffff feff
-ffff ff01 08ff ffff fd08 ffff fffe 0900
-0000 6f01 07ff ffff fcff ffff ff01 0000
-0000 0000 0000 0000 0600 0000 2001 0a08
-ffff fffd 08ff ffff fd00 0000 0002 0400
-0000 bc08 ffff fffd 0000 0000 0103 07ff
-ffff fcff ffff ff01 08ff ffff fc08 ffff
-fffe 0207 ffff fffb ffff ffff 0100 0000
-0000 0000 0000 0006 0000 0074 010a 
+0a00 0000 0a0a 0000 000f 0a00 0000 140a
+0000 0009 0a00 0000 030a 0000 0028 1d0a
+0000 0025 d10b 0b1f 0a00 0000 000a ffff
+ffff 1c0a ffff fffc 1c0a 0000 008a a20a
+ffff fffc 1c0a ffff fffa 0aff ffff fd1c
+0d1c 0c0a 0000 001a c00a ffff ffff 0aff
+ffff fa0a ffff fffc 1c0d 1b0b 0aff ffff
+ff1c 0a00 0000 010c 0aff ffff ff0a ffff
+fffe 1b0b 0a00 0000 2dd1 0b1e 
 ```

@@ -1,94 +1,132 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
-#define ERROR_NUM 7
+#include "cvmkernel.h"
 
-typedef enum error_t {
-    NONE_ERR,
-    ARGLEN_ERR,
-    COMMAND_ERR,
-    INOPEN_ERR,
-    OUTOPEN_ERR,
-    COMPILE_ERR,
-    EXEC_ERR,
-} error_t;
-
-static const char *errors[ERROR_NUM] = {
-    [NONE_ERR]    = "",
-    [ARGLEN_ERR]  = "len argc < 3",
-    [COMMAND_ERR] = "unknown command",
-    [INOPEN_ERR]  = "open input file",
-    [OUTOPEN_ERR] = "open output file",
-    [COMPILE_ERR] = "compile file",
-    [EXEC_ERR]    = "exec algorithm",
+enum {
+    ERR_NONE,
+    ERR_ARGLEN,
+    ERR_COMMAND,
+    ERR_INOPEN,
+    ERR_OUTOPEN,
+    ERR_COMPILE,
+    ERR_MEMSIZ,
+    ERR_RUN,
 };
 
-extern int readvm_src(FILE *output, FILE *input);
-extern int readvm_exc(FILE *input, int *result);
+static const char *errors[] = {
+    [ERR_NONE]    = "",
+    [ERR_ARGLEN]  = "len argc < 3",
+    [ERR_COMMAND] = "unknown command",
+    [ERR_INOPEN]  = "open input file",
+    [ERR_OUTOPEN] = "open output file",
+    [ERR_COMPILE] = "compile code",
+    [ERR_MEMSIZ]  = "memory size overflow",
+    [ERR_RUN]     = "run byte code",
+};
 
-static int compilevm_src(const char *outputf, const char *inputf);
-static int runvm_exc(const char *filename, int *retcode);
+static int file_compile(const char *outputf, const char *inputf);
+static int file_run(const char *filename, int **output, int *input);
+
+static void print_array(int *array, int size);
 
 int main(int argc, char const *argv[]) {
-    int result, retcode;
+    int input[argc];
+    int *output;
+    int retcode;
 
-    retcode = NONE_ERR;
+    retcode = ERR_NONE;
     if (argc < 3) {
-        retcode = ARGLEN_ERR;
+        retcode = ERR_ARGLEN;
         goto close;
     } 
 
     if (strcmp(argv[1], "build") == 0) {
         if (argc >= 5 && strcmp(argv[3], "-o") == 0) {
-            retcode = compilevm_src(argv[4], argv[2]);
+            retcode = file_compile(argv[4], argv[2]);
         } else {
-            retcode = compilevm_src("main.vme", argv[2]);
+            retcode = file_compile("main.vme", argv[2]);
         }
         goto close;
     } 
 
     if (strcmp(argv[1], "run") == 0) {
-    	retcode = runvm_exc(argv[2], &result);
-    	if (retcode != NONE_ERR) {
-    		retcode = EXEC_ERR;
+        input[0] = argc-3;
+        for (int i = 0; i < argc-3; ++i) {
+            input[i+1] = atoi(argv[i+3]);
+        }
+    	retcode = file_run(argv[2], &output, input);
+    	if (retcode != ERR_NONE) {
+            goto close;
     	}
-        printf("result exec: %d\n", result);
+        print_array(output+1, output[0]);
+        free(output);
         goto close;
     } 
 
-    retcode = COMMAND_ERR;
+    retcode = ERR_COMMAND;
 
 close:
-    if (retcode != NONE_ERR) {
-        fprintf(stderr, "> %s\n", errors[retcode]);
+    if (retcode != ERR_NONE) {
+        fprintf(stderr, "error: %s\n", errors[retcode]);
     }
     return retcode;
 }
 
-static int compilevm_src(const char *outputf, const char *inputf) {
-    FILE *input = fopen(inputf, "r");
+static int file_compile(const char *outputf, const char *inputf) {
+    FILE *output, *input;
+    int retcode;
+    input = fopen(inputf, "r");
     if (input == NULL) {
-        return INOPEN_ERR;
+        return ERR_INOPEN;
     }
-    FILE *output = fopen(outputf, "wb");
+    output = fopen(outputf, "wb");
     if (input == NULL) {
-        return OUTOPEN_ERR;
+        return ERR_OUTOPEN;
     }
-    int res = readvm_src(output, input);
+    retcode = cvm_compile(output, input);
     fclose(input);
     fclose(output);
-    if (res != NONE_ERR) {
-        return COMPILE_ERR;
+    if (retcode != ERR_NONE) {
+        return ERR_COMPILE;
     }
-    return NONE_ERR;
+    return ERR_NONE;
 }
 
-static int runvm_exc(const char *filename, int *result) {
-    FILE *input = fopen(filename, "rb");
-    if (input == NULL) {
-        return INOPEN_ERR;
+static int file_run(const char *filename, int **output, int *input) {
+    unsigned char *memory;
+    FILE *reader;
+    int fsize, retcode;
+    reader = fopen(filename, "rb");
+    if (reader == NULL) {
+        return ERR_INOPEN;
     }
-    int retcode = readvm_exc(input, result);
-    fclose(input);
-    return retcode;
+    // read len of code
+    fseek(reader, 0, SEEK_END);
+    fsize = ftell(reader);
+    fseek(reader, 0, SEEK_SET);
+    // insert code into memory
+    memory = (unsigned char*)malloc(sizeof(char)*fsize);
+    fread(memory, fsize, sizeof(char), reader);
+    fclose(reader);
+    fsize = cvm_load(memory, fsize);
+    free(memory);
+    if (fsize < 0) {
+        return ERR_MEMSIZ;
+    }
+    // run code in memory
+    retcode = cvm_run(output, input);
+    if (retcode != ERR_NONE) {
+        return ERR_RUN;
+    }
+    return ERR_NONE;
+}
+
+static void print_array(int *array, int size) {
+    printf("[ ");
+    for (int i = 0; i < size; ++i) {
+        printf("%d ", array[i]);
+    }
+    printf("]\n");
 }
