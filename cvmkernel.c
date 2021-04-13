@@ -18,9 +18,9 @@
 
 // Num of all instructions.
 #ifdef ADDITIONAL_INSTRUCTION
-	#define INSTR_SIZE 29
+	#define INSTR_SIZE 28
 #else
-	#define INSTR_SIZE 15
+	#define INSTR_SIZE 14
 #endif
 
 // 4096 BYTE
@@ -52,7 +52,6 @@ enum {
 	C_STOR = 0x1B, // 1 bytes
 	C_LOAD = 0x1C, // 1 bytes
 	C_CALL = 0x1D, // 1 bytes
-	C_RET  = 0x1E, // 1 bytes
 	C_HLT  = 0x1F, // 1 bytes
 #ifdef ADDITIONAL_INSTRUCTION
 	// 0xCN 
@@ -101,7 +100,6 @@ static struct virtual_machine {
 		{ C_STOR, "stor" }, // 0 arg, 2 stack
 		{ C_LOAD, "load" }, // 0 arg, 1 stack
 		{ C_CALL, "call" }, // 0 arg, 1 stack
-		{ C_RET,  "ret"  }, // 0 arg, 1 stack
 		{ C_HLT,  "hlt"  }, // 0 arg, 0 stack
 #ifdef ADDITIONAL_INSTRUCTION
 		// ADD INSTRUCTIONS
@@ -390,15 +388,6 @@ extern int cvm_run(int32_t **output, int32_t *input) {
 					return WRAP(opcode, 3);
 				}
 				stack_push(stack, &mi);
-				mi = num;
-			}
-			break;
-			case C_RET: {
-				int32_t num;
-				if (stack_size(stack) == 0) {
-					return WRAP(opcode, 1);
-				}
-				num = *(int32_t*)stack_pop(stack);
 				mi = num;
 			}
 			break;

@@ -1,12 +1,12 @@
 # VirtualMachine
-> Stack-based virtual machine. Version 1.0.0.
+> Stack-based virtual machine. Version 1.0.1.
 
 ### Pseudo instructions (num = 3)
 1. ""
 2. "labl"
 3. ";"
 
-### Main instructions (num = 12)
+### Main instructions (num = 11)
 1.  [0x0A] "push"  
 2.  [0x0B] "pop"   
 3.  [0x0C] "add"   
@@ -17,8 +17,7 @@
 8.  [0x1B] "stor" 
 9.  [0x1C] "load"  
 10. [0x1D] "call"  
-11. [0x1E] "ret"   
-12. [0x1F] "hlt"   
+11. [0x1F] "hlt"   
 
 ### Additional instructions (num = 14)
 1.  [0xA0] "mul"  
@@ -45,11 +44,16 @@ extern int cvm_run(int32_t **output, int32_t *input);
 
 ### Compile and run
 ```
+$ make install
+> git clone https://github.com/number571/extclib.git
 $ make 
+> gcc -o cvm -Wall -std=c99 cvm.c cvmkernel.c extclib/type/stack.c extclib/type/hashtab.c extclib/type/list.c 
+> ./cvm build main.vms -o main.vme
+> ./cvm run main.vme
 > [ 3 24 19 ]
 ```
 
-### Example: caesar encryption
+### Example: caesar encryption (assembly code)
 ```asm
 labl begin
     ; A[3] <- (10, 15, 20)
@@ -116,10 +120,11 @@ labl caesar_iter
     jmp 
 labl caesar_exit
     pop
-    ret
+    jmp
+
 ```
 
-### Output .File main.vme
+### Example: caesar encryption (binary code)
 ```
 0a00 0000 0a0a 0000 000f 0a00 0000 140a
 0000 0009 0a00 0000 030a 0000 0028 1d0a
@@ -129,5 +134,5 @@ ffff fffc 1c0a ffff fffa 0aff ffff fd1c
 0d1c 0c0a 0000 001a c00a ffff ffff 0aff
 ffff fa0a ffff fffc 1c0d 1b0b 0aff ffff
 ff1c 0a00 0000 010c 0aff ffff ff0a ffff
-fffe 1b0b 0a00 0000 2dd1 0b1e 
+fffe 1b0b 0a00 0000 2dd1 0bd1 
 ```
