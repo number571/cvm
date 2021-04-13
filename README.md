@@ -17,7 +17,7 @@
 8.  [0x1B] "stor" 
 9.  [0x1C] "load"  
 10. [0x1D] "call"  
-11. [0x1F] "hlt"   
+11. [0x1E] "hlt"   
 
 ### Additional instructions (num = 14)
 1.  [0xA0] "mul"  

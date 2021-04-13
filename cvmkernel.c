@@ -52,7 +52,7 @@ enum {
 	C_STOR = 0x1B, // 1 bytes
 	C_LOAD = 0x1C, // 1 bytes
 	C_CALL = 0x1D, // 1 bytes
-	C_HLT  = 0x1F, // 1 bytes
+	C_HLT  = 0x1E, // 1 bytes
 #ifdef ADDITIONAL_INSTRUCTION
 	// 0xCN 
 	// ADD INSTRUCTIONS (14)
