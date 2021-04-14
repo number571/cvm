@@ -1,4 +1,3 @@
-; WITH ADDITIONAL INSTRUCTIONS
 labl begin
     push 10
     push fact
@@ -44,4 +43,4 @@ labl _fact_for
 labl _fact_end
     ; return
     pop
-    ret
+    jmp

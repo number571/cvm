@@ -2,3 +2,4 @@ extclib/
 cvm
 cvm.exe
 *.o
+test/
