@@ -5,6 +5,7 @@ FILES=cvm.c cvmkernel.c extclib/type/stack.c extclib/type/hashtab.c extclib/type
 
 .PHONY: default install build run clean
 default: build run 
+
 install:
 	git clone https://github.com/number571/extclib.git || true
 	make -C extclib/

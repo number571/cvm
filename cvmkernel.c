@@ -29,11 +29,13 @@
 // C - char
 enum {
 	// 0xNN 
-	// PSEUDO INSTRUCTIONS (4)
-	C_UNDF = 0x00, // 0 bytes
-	C_VOID = 0x11, // 0 bytes
-	C_CMNT = 0x22, // 0 bytes
-	C_LABL = 0x33, // 0 bytes
+	// PSEUDO INSTRUCTIONS (2)
+	C_CMNT = 0x11, // 0 bytes
+	C_LABL = 0x22, // 0 bytes
+	// 0xCC 
+	// NULL INSTRUCTIONS (2)
+	C_UNDF = 0xAA, // 0 bytes
+	C_VOID = 0xBB, // 0 bytes
 	// 0xNC 
 	// MAIN INSTRUCTIONS (11)
 	C_PUSH = 0x0A, // 5 bytes
@@ -65,8 +67,6 @@ enum {
 	C_JGE  = 0xA2, // 1 bytes
 	C_ALLC = 0xB2, // 1 bytes
 #endif
-	// 0xCC 
-	// NOT USED
 };
 
 static struct virtual_machine {
@@ -80,10 +80,11 @@ static struct virtual_machine {
 	.mmused = 0,
 	.bclist = {
 		// PSEUDO INSTRUCTIONS
-		{ C_UNDF, ""     }, // 0 arg
-		{ C_VOID, ""     }, // 0 arg
 		{ C_CMNT, ";"    }, // 0 arg
 		{ C_LABL, "labl" }, // 1 arg
+		// NULL INSTRUCTIONS
+		{ C_VOID, "\0"   }, // 0 arg
+		{ C_UNDF, "\1"   }, // 0 arg
 		// MAIN INSTRUCTIONS
 		{ C_PUSH, "push" }, // 1 arg, 0 stack
 		{ C_POP,  "pop"  }, // 0 arg, 1 stack
@@ -116,7 +117,8 @@ static struct virtual_machine {
 	},
 };
 
-static char *read_code(char *line, uint8_t *opcode);
+static char *read_opcode(char *line, uint8_t *opcode);
+static uint8_t find_opcode(char *str);
 static uint16_t wrap_return(uint8_t x, uint8_t y);
 
 static uint32_t join_8bits_to_32bits(uint8_t *bytes);
@@ -124,10 +126,186 @@ static void split_32bits_to_8bits(uint32_t num, uint8_t *bytes);
 
 static char *str_trim_spaces(char *str);
 static char *str_set_end(char *str);
-
 static char *str_to_lower(char *str);
-static int str_is_void(char *str);
 
+/// SECTION: [COMPILE BEGIN]
+///
+// translate assembly mnemonics to byte codes
+// example: ("PUSH 5" -> C_PUSH || 0x00 || 0x00 || 0x00 || 0x05)
+extern int cvm_compile(FILE *output, FILE *input) {
+	hashtab_t *hashtab;
+	int bindex;
+	char buffer[BUFSIZ];
+	char *arg;
+	uint8_t opcode;
+
+	hashtab = hashtab_new(CVM_KERNEL_HMEMORY);
+	bindex = 0;
+
+	// save label addresses into hashtab
+	while(fgets(buffer, BUFSIZ, input) != NULL) {
+		arg = read_opcode(buffer, &opcode);
+		// if comment or void string
+		if(opcode == C_CMNT || opcode == C_VOID) {
+			continue;
+		}
+		// undefined instruction
+		if (opcode == C_UNDF) {
+			hashtab_free(hashtab);
+			return 1;
+		}
+		switch(opcode) {
+			// label instruction -> save current address
+			case C_LABL: {
+				hashtab_insert(hashtab, arg, &bindex, sizeof(bindex));
+			}
+			break;
+			// push instruction -> plus 5 bytes 
+			case C_PUSH: {
+				bindex += 5;
+			}
+			break;
+			// another instruction -> plus 1 byte
+			default: {
+				bindex += 1;
+			}
+		}
+	}
+
+	// read file from the beginning 
+	fseek(input, 0, SEEK_SET);
+
+	// write byte codes with saved label addresses
+	while(fgets(buffer, BUFSIZ, input) != NULL) {
+		arg = read_opcode(buffer, &opcode);
+		switch (opcode) {
+			// pass null and pseudo instructions
+			case C_VOID: case C_CMNT: case C_LABL: {
+			}
+			break;
+			// push instruction = 5 bytes 
+			case C_PUSH: {
+				uint8_t bytes[4];
+				int32_t *temp;
+				int32_t num;
+				temp = hashtab_select(hashtab, arg);
+				if (temp == NULL) {
+					num = atoi(arg);
+				} else {
+					num = *temp;
+				}
+				split_32bits_to_8bits((uint32_t)num, bytes);
+				fprintf(output, "%c%c%c%c%c", opcode, bytes[0], bytes[1], bytes[2], bytes[3]);
+			}
+			break;
+			// another instruction = 1 byte
+			default: {
+				fprintf(output, "%c", opcode);
+			}
+		}
+	}
+
+	hashtab_free(hashtab);
+	return 0;
+}
+
+// read opcode from string and return
+// pointer to first argument if exists
+static char *read_opcode(char *line, uint8_t *opcode) {
+	char *ptr;
+
+	// get first word in line
+	line = str_trim_spaces(line);
+	ptr = str_set_end(line);
+
+	// get opcode from word
+	*opcode = find_opcode(line);
+	switch(*opcode) {
+		case C_PUSH: case C_LABL:
+			break;
+		default:
+			return NULL;
+	}
+
+	// get second word in line
+	line = str_trim_spaces(++ptr);
+	str_set_end(line);
+
+	// pointer to first arg
+	return line;
+}
+
+// get instruction by mnemonic
+// example: "push" -> C_PUSH
+static uint8_t find_opcode(char *str) {
+	uint8_t opcode;
+
+	// default value
+	opcode = C_UNDF;
+
+	// opcode from word
+	for (int i = 0; i < CVM_KERNEL_ISIZE; ++i) {
+		if (strcmp(str_to_lower(str), VM.bclist[i].mnem) == 0) {
+			opcode = VM.bclist[i].bcode;
+			break;
+		}
+	}
+
+	return opcode;
+}
+
+// example: "PUSH" -> "push"
+static char *str_to_lower(char *str) {
+	int len = strlen(str);
+	for (int i = 0; i < len; ++i) {
+		str[i] = tolower(str[i]);
+	}
+	return str;
+}
+
+// example: "  word1 word2 word3" -> "word1 word2 word3"
+static char *str_trim_spaces(char *str) {
+	while(isspace(*str)) {
+		++str;
+	}
+	return str;
+}
+
+// example: "word1 word2 word3" -> "word1\0word2 word3"
+static char *str_set_end(char *str) {
+	char *ptr = str;
+	while(!isspace(*ptr)) {
+		++ptr;
+	}
+	*ptr = '\0';
+	return ptr;
+}
+
+// return (x[0], x[1], x[2], x[3])
+static void split_32bits_to_8bits(uint32_t num, uint8_t *bytes) {
+	for (int i = 0; i < 4; ++i) {
+		bytes[i] = (uint8_t)(num >> (24 - i * 8));
+	}
+}
+///
+/// SECTION: [END COMPILE]
+
+/// SECTION: [LOAD BEGIN]
+///
+// load byte codes to static memory of virtual machine
+extern int cvm_load(uint8_t *memory, int32_t msize) {
+	if (msize < 0 || msize >= CVM_KERNEL_CMEMORY) {
+		return 1;
+	}
+	memcpy(VM.memory, memory, msize);
+	VM.mmused = msize;
+	return 0;
+}
+///
+/// SECTION: [LOAD END]
+
+/// SECTION: [RUN BEGIN]
+///
 extern int cvm_run(int32_t **output, int32_t *input) {
 	stack_t *stack;
 	uint8_t opcode;
@@ -399,128 +577,19 @@ extern int cvm_run(int32_t **output, int32_t *input) {
 
 close:
 	mi = stack_size(stack);
+
 	*output = (int32_t*)malloc(sizeof(int32_t)*(mi+1));
 	(*output)[0] = mi;
+
 	for (int i = 0; i < mi; ++i) {
 		(*output)[i+1] = *(int32_t*)stack_pop(stack);
 	}
+
 	stack_free(stack);
 	return wrap_return(0x00, 0);
 }
 
-extern int cvm_load(uint8_t *memory, int32_t msize) {
-	if (msize < 0 || msize >= CVM_KERNEL_CMEMORY) {
-		return 1;
-	}
-	memcpy(VM.memory, memory, msize);
-	VM.mmused = msize;
-	return 0;
-}
-
-extern int cvm_compile(FILE *output, FILE *input) {
-	hashtab_t *hashtab;
-	int byte_index;
-	char buffer[BUFSIZ];
-	char *arg;
-	uint8_t opcode;
-
-	hashtab = hashtab_new(CVM_KERNEL_HMEMORY);
-	byte_index = 0;
-
-	while(fgets(buffer, BUFSIZ, input) != NULL) {
-		arg = read_code(buffer, &opcode);
-		if(opcode == C_CMNT || opcode == C_VOID) {
-			continue;
-		}
-		if (opcode == C_UNDF) {
-			hashtab_free(hashtab);
-			return 1;
-		}
-		switch(opcode) {
-			case C_LABL: {
-				hashtab_insert(hashtab, arg, &byte_index, sizeof(byte_index));
-			}
-			break;
-			case C_PUSH: {
-				byte_index += 5;
-			}
-			break;
-			default: {
-				byte_index += 1;
-			}
-		}
-	}
-
-	fseek(input, 0, SEEK_SET);
-
-	while(fgets(buffer, BUFSIZ, input) != NULL) {
-		arg = read_code(buffer, &opcode);
-		switch (opcode) {
-			case C_VOID: case C_CMNT: case C_LABL: {
-			}
-			break;
-			case C_PUSH: {
-				uint8_t bytes[4];
-				int32_t *temp;
-				int32_t num;
-				temp = hashtab_select(hashtab, arg);
-				if (temp == NULL) {
-					num = atoi(arg);
-				} else {
-					num = *temp;
-				}
-				split_32bits_to_8bits((uint32_t)num, bytes);
-				fprintf(output, "%c%c%c%c%c", opcode, bytes[0], bytes[1], bytes[2], bytes[3]);
-			}
-			break;
-			default: {
-				fprintf(output, "%c", opcode);
-			}
-		}
-	}
-
-	hashtab_free(hashtab);
-	return 0;
-}
-
-// read opcode from string and return
-// pointer to first argument if exists.
-static char *read_code(char *line, uint8_t *opcode) {
-	char *ptr;
-
-	line = str_trim_spaces(line);
-	ptr = str_set_end(line);
-
-	*opcode = C_UNDF;
-	for (int i = 0; i < CVM_KERNEL_ISIZE; ++i) {
-		if (strcmp(str_to_lower(line), VM.bclist[i].mnem) == 0) {
-			*opcode = VM.bclist[i].bcode;
-			break;
-		}
-	}
-
-	if (str_is_void(line)) {
-		*opcode = C_VOID;
-	}
-
-	switch(*opcode) {
-		case C_PUSH: case C_LABL:
-			break;
-		default:
-			return NULL;
-	}
-
-	line = str_trim_spaces(++ptr);
-	str_set_end(line);
-
-	// pointer to first arg
-	return line;
-}
-
-static uint16_t wrap_return(uint8_t x, uint8_t y) {
-	return ((uint16_t)x << 8) | y;
-}
-
+// return (x[0] || x[1] || x[2] || x[3])
 static uint32_t join_8bits_to_32bits(uint8_t *bytes) {
 	uint32_t num;
 	for (uint8_t *ptr = bytes; ptr < bytes + 4; ++ptr) {
@@ -529,39 +598,9 @@ static uint32_t join_8bits_to_32bits(uint8_t *bytes) {
 	return num;
 }
 
-static void split_32bits_to_8bits(uint32_t num, uint8_t *bytes) {
-	for (int i = 0; i < 4; ++i) {
-		bytes[i] = (uint8_t)(num >> (24 - i * 8));
-	}
+// return (x || y)
+static uint16_t wrap_return(uint8_t x, uint8_t y) {
+	return ((uint16_t)x << 8) | y;
 }
-
-static char *str_set_end(char *str) {
-	char *ptr = str;
-	while(!isspace(*ptr)) {
-		++ptr;
-	}
-	*ptr = '\0';
-	return ptr;
-}
-
-static char *str_trim_spaces(char *str) {
-	while(isspace(*str)) {
-		++str;
-	}
-	return str;
-}
-
-static char *str_to_lower(char *str) {
-	int len = strlen(str);
-	for (int i = 0; i < len; ++i) {
-		str[i] = tolower(str[i]);
-	}
-	return str;
-}
-
-static int str_is_void(char *str) {
-	while(isspace(*str)) {
-		++str;
-	}
-	return *str == '\0';
-}
+///
+/// SECTION: [RUN END]

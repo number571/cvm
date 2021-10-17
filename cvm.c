@@ -55,6 +55,9 @@ int main(int argc, char const *argv[]) {
             outfile = argv[4];
         }
         retcode = file_compile(outfile, argv[2]);
+        if (retcode != ERR_NONE) {
+            fprintf(stderr, "error: %s\n", errors[retcode]);
+        }
     }
 
     if (strcmp(argv[1], CVM_RUN) == 0) {
