@@ -1,10 +1,13 @@
 # VirtualMachine
-> Stack-based virtual machine. Version 1.0.1.
+> Stack-based virtual machine. Version 1.0.2.
 
-### Pseudo instructions (num = 3)
-1. ""
-2. "labl"
-3. ";"
+### Pseudo instructions (num = 2)
+1. [0x11] ";"
+2. [0x22] "labl"
+
+### Null instructions (num = 2)
+1. [0xAA] "\0" (void string)
+2. [0xBB] "\1" (undefined code)
 
 ### Main instructions (num = 11)
 1.  [0x0A] "push"  
@@ -19,21 +22,23 @@
 10. [0x1D] "call"  
 11. [0x1E] "hlt"   
 
-### Additional instructions (num = 14)
-1.  [0xA0] "mul"  
-2.  [0xB0] "div"   
-3.  [0xC0] "mod"   
-4.  [0xD0] "shr"   
-5.  [0xE0] "shl"    
-6.  [0xF0] "xor"    
-7.  [0xA1] "and"    
-8.  [0xB1] "or" 
-9.  [0xC1] "not"  
-10. [0xD1] "jmp"  
-11. [0xE1] "jne"   
-12. [0xF1] "jle"   
-13. [0xA2] "jge"   
-14. [0xB2] "allc"   
+### Additional instructions (num = 16)
+1.  [0xA0] "inc"  
+2.  [0xB0] "dec"   
+3.  [0xC0] "mul"   
+4.  [0xD0] "div"   
+5.  [0xE0] "mod"    
+6.  [0xF0] "shr"    
+7.  [0xA1] "shl"    
+8.  [0xB1] "xor" 
+9.  [0xC1] "and"  
+10. [0xD1] "or"  
+11. [0xE1] "not"   
+12. [0xF1] "jmp"   
+13. [0xA2] "jne"   
+14. [0xB2] "jle"   
+15. [0xC2] "jge"   
+16. [0xD2] "allc"   
 
 ### Interface functions
 ```c
@@ -50,89 +55,55 @@ $ make
 > gcc -o cvm -Wall -std=c99 cvm.c cvmkernel.c extclib/type/stack.c extclib/type/hashtab.c extclib/type/list.c 
 > ./cvm build main.vms -o main.vme
 > ./cvm run main.vme
-> [ 3 24 19 ]
+> 
+{
+	"result": [50],
+	"return": 0
+}
 ```
 
-### Example: caesar encryption (assembly code)
+### Example: mul5 function (assembly code)
 ```asm
+labl _start
+	push begin 
+	jmp
+
+; main
 labl begin
-    ; A[3] <- (10, 15, 20)
-    push 10
-    push 15
-    push 20
-    ; K <- 9
-    push 9
-    ; S <- size(A)
-    push 3
-    push caesar
-    call
-    push end
-    jmp
+	; mul5(x) = x * 5
+	; where x = 10
+	push 10
+	push mul5
+	call
+	push end
+	jmp	
+
+; exit 
 labl end
-    pop
-    pop
-    hlt
+	hlt
 
-labl caesar
-    ; I = 0
-    push 0
-labl caesar_iter
-    ; IF I >= S
-    push -1
-    load
-    push -4
-    load
-    push caesar_exit
-    jge
+; x = arg[1]
+labl mul5
+	; y = x * 5
+	push -2
+	load 
+	push 5
+	mul
 
-    ; A' <- (K + A[I]) mod 26
-    push -4
-    load
-    push -6
-    push -3
-    load
-    sub
-    load
-    add
-    push 26
-    mod
+	; x = y
+	push -1
+	push -3
+	stor 
 
-    ; A[I] <- A'
-    push -1
-    push -6
-    push -4
-    load
-    sub
-    stor
-    pop
-
-    ; I <- I + 1
-    push -1
-    load
-    push 1
-    add
-    push -1
-    push -2
-    stor
-    pop
-
-    push caesar_iter
-    jmp 
-labl caesar_exit
-    pop
-    jmp
-
+	; return
+	pop
+	jmp
 ```
 
-### Example: caesar encryption (binary code)
+### Example: mul5 function (binary code)
 ```
-0a00 0000 0a0a 0000 000f 0a00 0000 140a
-0000 0009 0a00 0000 030a 0000 0028 1d0a
-0000 0025 d10b 0b1f 0a00 0000 000a ffff
-ffff 1c0a ffff fffc 1c0a 0000 008a a20a
-ffff fffc 1c0a ffff fffa 0aff ffff fd1c
-0d1c 0c0a 0000 001a c00a ffff ffff 0aff
-ffff fa0a ffff fffc 1c0d 1b0b 0aff ffff
-ff1c 0a00 0000 010c 0aff ffff ff0a ffff
-fffe 1b0b 0a00 0000 2dd1 0bd1 
+0a00 0000 06f1 0a00 0000 0a0a 0000 0018
+1d0a 0000 0017 f11e 0aff ffff fe1c 0a00
+0000 05c0 0aff ffff ff0a ffff fffd 1b0b
+f1
 ```
