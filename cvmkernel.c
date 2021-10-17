@@ -452,6 +452,7 @@ static int exec_pop(stack_t *stack) {
 	return 0;
 }
 
+// increment or decrement operation
 static int exec_incdec(stack_t *stack, uint8_t opcode) {
 	int32_t x;
 
