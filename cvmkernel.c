@@ -17,7 +17,7 @@
 #ifdef CVM_KERNEL_IAPPEND
 	#define CVM_KERNEL_ISIZE 31
 #else
-	#define CVM_KERNEL_ISIZE 17
+	#define CVM_KERNEL_ISIZE 15
 #endif
 
 // Memory settings.
@@ -149,6 +149,7 @@ static uint16_t wrap_return(uint8_t x, uint8_t y);
 
 // translate assembly mnemonics to byte codes
 // example: ("PUSH 5" -> C_PUSH || 0x00 || 0x00 || 0x00 || 0x05)
+// example: ("POP" -> C_POP)
 extern int cvm_compile(FILE *output, FILE *input) {
 	hashtab_t *hashtab;
 	int32_t bindex;
