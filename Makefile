@@ -7,7 +7,7 @@ FILES=cvm.c cvmkernel.c extclib/type/stack.c extclib/type/hashtab.c extclib/type
 default: build run 
 
 install:
-	git clone https://github.com/number571/extclib.git || true
+	git clone -b v0.7.1 https://github.com/number571/extclib.git || true
 	make -C extclib/
 build: $(FILES)
 	$(CC) -o cvm $(CFLAGS) $(FILES)
