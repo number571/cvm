@@ -31,7 +31,7 @@ static const char *errors[] = {
     [ERR_RUN]     = "run byte code",
 };
 
-static int file_compile(const char *outputf, const char *inputf);
+static int file_build(const char *outputf, const char *inputf);
 static int file_run(const char *filename, int **output, int *input);
 
 static void print_json_failed(int retcode);
@@ -52,7 +52,7 @@ int main(int argc, char const *argv[]) {
 
     // cvm help
     if (argc == 2 && strcmp(argv[1], CVM_HELP) == 0) {
-        printf("help: \n\t$ cvm [build|run] file\n");
+        printf("help: \n\t$ cvm [build|run] file {if build [-o outfile]}\n");
         return ERR_NONE;
     }
 
@@ -77,7 +77,7 @@ int main(int argc, char const *argv[]) {
             outfile = argv[4];
         }
 
-        retcode = file_compile(outfile, argv[2]);
+        retcode = file_build(outfile, argv[2]);
         if (retcode != ERR_NONE) {
             fprintf(stderr, "error: %s\n", errors[retcode]);
         }
@@ -102,7 +102,7 @@ int main(int argc, char const *argv[]) {
     return retcode;
 }
 
-static int file_compile(const char *outputf, const char *inputf) {
+static int file_build(const char *outputf, const char *inputf) {
     FILE *output, *input;
     int retcode;
 
