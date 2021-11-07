@@ -629,13 +629,13 @@ static int exec_condjmp(stack_t *stack, uint8_t opcode, int32_t *mi) {
 
 	switch(opcode) {
 	#ifdef CVM_KERNEL_IAPPEND
-		case C_JNE:	(y != x) ? (*mi = num) : 0; break;
-		case C_JLE: (y <= x) ? (*mi = num) : 0; break;
-		case C_JGE:	(y >= x) ? (*mi = num) : 0; break;
+		case C_JNE: if(y != x) {*mi = num;} break;
+		case C_JLE: if(y <= x) {*mi = num;} break;
+		case C_JGE:	if(y >= x) {*mi = num;} break;
 	#endif
-		case C_JE:	(y == x) ? (*mi = num) : 0; break;
-		case C_JL:	(y <  x) ? (*mi = num) : 0; break;
-		case C_JG: 	(y >  x) ? (*mi = num) : 0; break;
+		case C_JE:	if(y == x) {*mi = num;} break;
+		case C_JL:	if(y <  x) {*mi = num;} break;
+		case C_JG: 	if(y >  x) {*mi = num;} break;
 		default: 	return wrap_return(opcode, 4);
 	}
 
