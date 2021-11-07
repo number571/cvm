@@ -491,6 +491,8 @@ static int exec_binop(stack_t *stack, uint8_t opcode) {
 	y = *(int32_t*)stack_pop(stack);
 
 	switch(opcode) {
+		case C_ADD:	y += x;		break;
+		case C_SUB:	y -= x;		break;
 	#ifdef CVM_KERNEL_IAPPEND
 		case C_MUL:	y *= x;		break;
 		case C_DIV:	y /= x;		break;
@@ -501,8 +503,6 @@ static int exec_binop(stack_t *stack, uint8_t opcode) {
 		case C_SHR:	y >>= x;	break;
 		case C_SHL:	y <<= x;	break;
 	#endif
-		case C_ADD:	y += x;		break;
-		case C_SUB:	y -= x;		break;
 		default: 	return wrap_return(opcode, 2);
 	}
 
@@ -628,14 +628,14 @@ static int exec_condjmp(stack_t *stack, uint8_t opcode, int32_t *mi) {
 	y = *(int32_t*)stack_pop(stack);
 
 	switch(opcode) {
+		case C_JE:	if(y == x) {*mi = num;} break;
+		case C_JL:	if(y <  x) {*mi = num;} break;
+		case C_JG: 	if(y >  x) {*mi = num;} break;
 	#ifdef CVM_KERNEL_IAPPEND
 		case C_JNE: if(y != x) {*mi = num;} break;
 		case C_JLE: if(y <= x) {*mi = num;} break;
 		case C_JGE:	if(y >= x) {*mi = num;} break;
 	#endif
-		case C_JE:	if(y == x) {*mi = num;} break;
-		case C_JL:	if(y <  x) {*mi = num;} break;
-		case C_JG: 	if(y >  x) {*mi = num;} break;
 		default: 	return wrap_return(opcode, 4);
 	}
 
