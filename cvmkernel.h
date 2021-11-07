@@ -1,6 +1,7 @@
 #ifndef CVM_KERNEL_H
 #define CVM_KERNEL_H
 
+#include <stdio.h>
 #include <stdint.h>
 
 extern int cvm_compile(FILE *output, FILE *input);
