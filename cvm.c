@@ -4,6 +4,7 @@
 
 #include "cvmkernel.h"
 
+#define CVM_HELP    "help"
 #define CVM_RUN     "run"
 #define CVM_BUILD   "build"
 #define CVM_OUTFILE "main.vme"
@@ -43,26 +44,49 @@ int main(int argc, char const *argv[]) {
     int *output;
     int retcode;
 
-    retcode = ERR_COMMAND;
-    outfile = CVM_OUTFILE;
+    int is_build;
+    int is_run;
 
+    outfile = CVM_OUTFILE;
+    retcode = ERR_COMMAND;
+
+    // cvm help
+    if (argc == 2 && strcmp(argv[1], CVM_HELP) == 0) {
+        printf("help: \n\t$ cvm [build|run] file\n");
+        return ERR_NONE;
+    }
+
+    // cvm | cvm undefined
     if (argc < 3) {
+        fprintf(stderr, "error: %s\n", errors[ERR_ARGLEN]);
         return ERR_ARGLEN;
     }
 
-    if (strcmp(argv[1], CVM_BUILD) == 0) {
-        if (argc >= 5 && strcmp(argv[3], "-o") == 0) {
+    is_build = strcmp(argv[1], CVM_BUILD) == 0;
+    is_run = strcmp(argv[1], CVM_RUN) == 0;
+
+    // cvm undefined x
+    if (!is_build && !is_run) {
+        fprintf(stderr, "error: %s\n", errors[ERR_COMMAND]);
+        return ERR_COMMAND;
+    }
+
+    // cvm build file [-o outfile]
+    if (is_build) {
+        if (argc == 5 && strcmp(argv[3], "-o") == 0) {
             outfile = argv[4];
         }
+
         retcode = file_compile(outfile, argv[2]);
         if (retcode != ERR_NONE) {
             fprintf(stderr, "error: %s\n", errors[retcode]);
         }
     }
 
-    if (strcmp(argv[1], CVM_RUN) == 0) {
+    // cvm run file [args]
+    if (is_run) {
         input[0] = argc-3;
-        for (int i = 0; i < argc-3; ++i) {
+        for (int i = 0; i < input[0]; ++i) {
             input[i+1] = atoi(argv[i+3]);
         }
 
