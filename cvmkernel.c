@@ -40,11 +40,11 @@ enum {
 	// MAIN INSTRUCTIONS (11)
 	C_PUSH = 0x0A, // 5 bytes
 	C_POP  = 0x0B, // 1 byte
-	C_ADD  = 0x0C, // 1 byte
-	C_SUB  = 0x0D, // 1 byte
-	C_JL   = 0x0E, // 1 byte
-	C_JG   = 0x0F, // 1 byte
-	C_JE   = 0x1A, // 1 byte
+	C_INC  = 0x0C, // 1 byte
+	C_DEC  = 0x0D, // 1 byte
+	C_JG   = 0x0E, // 1 byte
+	C_JE   = 0x0F, // 1 byte
+	C_JMP  = 0x1A, // 1 byte
 	C_STOR = 0x1B, // 1 byte
 	C_LOAD = 0x1C, // 1 byte
 	C_CALL = 0x1D, // 1 byte
@@ -52,8 +52,8 @@ enum {
 #ifdef CVM_KERNEL_IAPPEND
 	// 0xCN 
 	// ADD INSTRUCTIONS (16)
-	C_INC  = 0xA0, // 1 byte
-	C_DEC  = 0xB0, // 1 byte
+	C_ADD  = 0xA0, // 1 byte
+	C_SUB  = 0xB0, // 1 byte
 	C_MUL  = 0xC0, // 1 byte
 	C_DIV  = 0xD0, // 1 byte
 	C_MOD  = 0xE0, // 1 byte
@@ -63,7 +63,7 @@ enum {
 	C_AND  = 0xC1, // 1 byte
 	C_OR   = 0xD1, // 1 byte
 	C_NOT  = 0xE1, // 1 byte
-	C_JMP  = 0xF1, // 1 byte
+	C_JL   = 0xF1, // 1 byte
 	C_JNE  = 0xA2, // 1 byte
 	C_JLE  = 0xB2, // 1 byte
 	C_JGE  = 0xC2, // 1 byte
@@ -90,9 +90,8 @@ static struct virtual_machine {
 		// MAIN INSTRUCTIONS
 		{ C_PUSH, "push" }, // 1 arg, 0 stack
 		{ C_POP,  "pop"  }, // 0 arg, 1 stack
-		{ C_ADD,  "add"  }, // 0 arg, 2 stack
-		{ C_SUB,  "sub"  }, // 0 arg, 2 stack
-		{ C_JL,   "jl"   }, // 0 arg, 3 stack
+		{ C_INC,  "inc"  }, // 0 arg, 1 stack
+		{ C_DEC,  "dec"  }, // 0 arg, 1 stack
 		{ C_JG,   "jg"   }, // 0 arg, 3 stack
 		{ C_JE,   "je"   }, // 0 arg, 3 stack
 		{ C_STOR, "stor" }, // 0 arg, 2 stack
@@ -101,8 +100,8 @@ static struct virtual_machine {
 		{ C_HLT,  "hlt"  }, // 0 arg, 0 stack
 #ifdef CVM_KERNEL_IAPPEND
 		// ADD INSTRUCTIONS
-		{ C_INC,  "inc"  }, // 0 arg, 1 stack
-		{ C_DEC,  "dec"  }, // 0 arg, 1 stack
+		{ C_ADD,  "add"  }, // 0 arg, 2 stack
+		{ C_SUB,  "sub"  }, // 0 arg, 2 stack
 		{ C_MUL,  "mul"  }, // 0 arg, 2 stack
 		{ C_DIV,  "div"  }, // 0 arg, 2 stack
 		{ C_MOD,  "mod"  }, // 0 arg, 2 stack
@@ -112,10 +111,11 @@ static struct virtual_machine {
 		{ C_AND,  "and"  }, // 0 arg, 2 stack
 		{ C_OR,   "or"   }, // 0 arg, 2 stack
 		{ C_NOT,  "not"  }, // 0 arg, 1 stack
-		{ C_JMP,  "jmp"  }, // 0 arg, 1 stack
+		{ C_JL,   "jl"   }, // 0 arg, 3 stack
 		{ C_JNE,  "jne"  }, // 0 arg, 3 stack
 		{ C_JLE,  "jle"  }, // 0 arg, 3 stack
 		{ C_JGE,  "jge"  }, // 0 arg, 3 stack
+		{ C_JMP,  "jmp"  }, // 0 arg, 1 stack
 		{ C_ALLC, "allc" }, // 0 arg, 1 stack
 #endif
 	},
@@ -355,6 +355,7 @@ extern int cvm_run(int32_t **output, int32_t *input) {
 	mi = 0;
 	while(mi < VM.cmused) {
 		opcode = VM.memory[mi++];
+
 		switch(opcode) {
 			case C_PUSH:
 				retcode = exec_push(stack, &mi);
@@ -362,14 +363,8 @@ extern int cvm_run(int32_t **output, int32_t *input) {
 			case C_POP:
 				retcode = exec_pop(stack);
 			break;
-		#ifdef CVM_KERNEL_IAPPEND
-			case C_MUL: case C_DIV:
-			case C_MOD: case C_AND: 
-			case C_OR:  case C_XOR:
-			case C_SHR: case C_SHL: 
-		#endif
-			case C_ADD: case C_SUB: 
-				retcode = exec_binop(stack, opcode);
+			case C_INC: case C_DEC:
+				retcode = exec_incdec(stack, opcode);
 			break;
 			case C_STOR: 
 				retcode = exec_stor(stack);
@@ -378,14 +373,18 @@ extern int cvm_run(int32_t **output, int32_t *input) {
 				retcode = exec_load(stack);
 			break;
 		#ifdef CVM_KERNEL_IAPPEND
-			case C_JGE: case C_JLE: case C_JNE: 
+			case C_JGE: case C_JLE: case C_JNE: case C_JL: 
 		#endif 
-			case C_JL: case C_JG: case C_JE: 
+			case C_JG: case C_JE: 
 				retcode = exec_condjmp(stack, opcode, &mi);
 			break;
 		#ifdef CVM_KERNEL_IAPPEND
-			case C_INC: case C_DEC:
-				retcode = exec_incdec(stack, opcode);
+			case C_MUL: case C_DIV:
+			case C_MOD: case C_AND: 
+			case C_OR:  case C_XOR:
+			case C_SHR: case C_SHL: 
+			case C_ADD: case C_SUB: 
+				retcode = exec_binop(stack, opcode);
 			break;
 			case C_NOT:
 				retcode = exec_not(stack);
@@ -408,6 +407,7 @@ extern int cvm_run(int32_t **output, int32_t *input) {
 				retcode = wrap_return(C_UNDF, 1);
 			break;
 		}
+	
 		if (retcode != 0) {
 			stack_free(stack);
 			return retcode;
@@ -493,7 +493,6 @@ static int exec_binop(stack_t *stack, uint8_t opcode) {
 	switch(opcode) {
 		case C_ADD:	y += x;		break;
 		case C_SUB:	y -= x;		break;
-	#ifdef CVM_KERNEL_IAPPEND
 		case C_MUL:	y *= x;		break;
 		case C_DIV:	y /= x;		break;
 		case C_MOD: y %= x;		break;
@@ -502,7 +501,6 @@ static int exec_binop(stack_t *stack, uint8_t opcode) {
 		case C_XOR: y ^= x;		break;
 		case C_SHR:	y >>= x;	break;
 		case C_SHL:	y <<= x;	break;
-	#endif
 		default: 	return wrap_return(opcode, 2);
 	}
 
@@ -629,13 +627,11 @@ static int exec_condjmp(stack_t *stack, uint8_t opcode, int32_t *mi) {
 
 	switch(opcode) {
 		case C_JE:	if(y == x) {*mi = num;} break;
-		case C_JL:	if(y <  x) {*mi = num;} break;
 		case C_JG: 	if(y >  x) {*mi = num;} break;
-	#ifdef CVM_KERNEL_IAPPEND
+		case C_JL:	if(y <  x) {*mi = num;} break;
 		case C_JNE: if(y != x) {*mi = num;} break;
 		case C_JLE: if(y <= x) {*mi = num;} break;
 		case C_JGE:	if(y >= x) {*mi = num;} break;
-	#endif
 		default: 	return wrap_return(opcode, 4);
 	}
 

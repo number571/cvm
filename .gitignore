@@ -3,3 +3,4 @@ cvm
 cvm.exe
 *.o
 test/
+main.vme 

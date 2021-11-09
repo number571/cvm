@@ -1,5 +1,5 @@
 # VirtualMachine
-> Stack-based virtual machine. Version 1.0.2.
+> Stack-based virtual machine. Version 1.0.4.
 
 ### Pseudo instructions (num = 2)
 1. [0x11] ";"
@@ -12,19 +12,19 @@
 ### Main instructions (num = 11)
 1.  [0x0A] "push"  
 2.  [0x0B] "pop"   
-3.  [0x0C] "add"   
-4.  [0x0D] "sub"   
-5.  [0x0E] "jl"    
-6.  [0x0F] "jg"    
-7.  [0x1A] "je"    
+3.  [0x0C] "inc"   
+4.  [0x0D] "dec"   
+5.  [0x0E] "jg"    
+6.  [0x0F] "je"    
+7.  [0x1A] "jmp"    
 8.  [0x1B] "stor" 
 9.  [0x1C] "load"  
 10. [0x1D] "call"  
 11. [0x1E] "hlt"   
 
 ### Additional instructions (num = 16)
-1.  [0xA0] "inc"  
-2.  [0xB0] "dec"   
+1.  [0xA0] "add"  
+2.  [0xB0] "sub"   
 3.  [0xC0] "mul"   
 4.  [0xD0] "div"   
 5.  [0xE0] "mod"    
@@ -34,7 +34,7 @@
 9.  [0xC1] "and"  
 10. [0xD1] "or"  
 11. [0xE1] "not"   
-12. [0xF1] "jmp"   
+12. [0xF1] "jl"   
 13. [0xA2] "jne"   
 14. [0xB2] "jle"   
 15. [0xC2] "jge"   
@@ -102,8 +102,8 @@ labl mul5
 
 ### Example: mul5 function (binary code)
 ```
-0a00 0000 06f1 0a00 0000 0a0a 0000 0018
-1d0a 0000 0017 f11e 0aff ffff fe1c 0a00
+0a00 0000 061a 0a00 0000 0a0a 0000 0018
+1d0a 0000 0017 1a1e 0aff ffff fe1c 0a00
 0000 05c0 0aff ffff ff0a ffff fffd 1b0b
-f1
+1a
 ```
