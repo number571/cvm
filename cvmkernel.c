@@ -360,6 +360,27 @@ extern int cvm_run(int32_t **output, int32_t *input) {
 		opcode = VM.memory[mi++];
 
 		switch(opcode) {
+		#ifdef CVM_KERNEL_IAPPEND
+			case C_MUL: case C_DIV:
+			case C_MOD: case C_AND: 
+			case C_OR:  case C_XOR:
+			case C_SHR: case C_SHL: 
+			case C_ADD: case C_SUB: 
+				retcode = exec_binop(stack, opcode);
+			break;
+			case C_NOT:
+				retcode = exec_not(stack);
+			break;
+			case C_ALLC: 
+				retcode = exec_allc(stack);
+			break;
+		#endif
+		#ifdef CVM_KERNEL_IAPPEND
+			case C_JGE: case C_JLE: case C_JNE: case C_JL: 
+		#endif 
+			case C_JG: case C_JE: 
+				retcode = exec_condjmp(stack, opcode, &mi);
+			break;
 			case C_PUSH:
 				retcode = exec_push(stack, &mi);
 			break;
@@ -375,30 +396,9 @@ extern int cvm_run(int32_t **output, int32_t *input) {
 			case C_LOAD: 
 				retcode = exec_load(stack);
 			break;
-		#ifdef CVM_KERNEL_IAPPEND
-			case C_JGE: case C_JLE: case C_JNE: case C_JL: 
-		#endif 
-			case C_JG: case C_JE: 
-				retcode = exec_condjmp(stack, opcode, &mi);
-			break;
-		#ifdef CVM_KERNEL_IAPPEND
-			case C_MUL: case C_DIV:
-			case C_MOD: case C_AND: 
-			case C_OR:  case C_XOR:
-			case C_SHR: case C_SHL: 
-			case C_ADD: case C_SUB: 
-				retcode = exec_binop(stack, opcode);
-			break;
-			case C_NOT:
-				retcode = exec_not(stack);
-			break;
-			case C_ALLC: 
-				retcode = exec_allc(stack);
-			break;
 			case C_JMP: 
 				retcode = exec_jmp(stack, &mi);
 			break;
-		#endif
 			case C_CALL: 
 				retcode = exec_call(stack, &mi);
 			break;
