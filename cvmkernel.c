@@ -94,6 +94,7 @@ static struct virtual_machine {
 		{ C_DEC,  "dec"  }, // 0 arg, 1 stack
 		{ C_JG,   "jg"   }, // 0 arg, 3 stack
 		{ C_JE,   "je"   }, // 0 arg, 3 stack
+		{ C_JMP,  "jmp"  }, // 0 arg, 1 stack
 		{ C_STOR, "stor" }, // 0 arg, 2 stack
 		{ C_LOAD, "load" }, // 0 arg, 1 stack
 		{ C_CALL, "call" }, // 0 arg, 1 stack
@@ -115,7 +116,6 @@ static struct virtual_machine {
 		{ C_JNE,  "jne"  }, // 0 arg, 3 stack
 		{ C_JLE,  "jle"  }, // 0 arg, 3 stack
 		{ C_JGE,  "jge"  }, // 0 arg, 3 stack
-		{ C_JMP,  "jmp"  }, // 0 arg, 1 stack
 		{ C_ALLC, "allc" }, // 0 arg, 1 stack
 #endif
 	},
@@ -130,16 +130,19 @@ static char *str_trim_spaces(char *str);
 static char *str_set_end(char *str);
 static char *str_to_lower(char *str);
 
+#ifdef CVM_KERNEL_IAPPEND
+	static int exec_not(stack_t *stack);
+	static int exec_binop(stack_t *stack, uint8_t opcode);
+	static int exec_allc(stack_t *stack);
+#endif 
+
 static int exec_push(stack_t *stack, int32_t *mi);
 static int exec_pop(stack_t *stack);
 static int exec_incdec(stack_t *stack, uint8_t opcode);
-static int exec_not(stack_t *stack);
-static int exec_binop(stack_t *stack, uint8_t opcode);
 static int exec_stor(stack_t *stack);
 static int exec_load(stack_t *stack);
 extern int exec_jmp(stack_t *stack, int32_t *mi);
 static int exec_condjmp(stack_t *stack, uint8_t opcode, int32_t *mi);
-static int exec_allc(stack_t *stack);
 static int exec_call(stack_t *stack, int32_t *mi);
 
 static uint32_t join_8bits_to_32bits(uint8_t *bytes);
@@ -469,44 +472,71 @@ static int exec_incdec(stack_t *stack, uint8_t opcode) {
 	return 0;
 }
 
-// bitwise negation 
-static int exec_not(stack_t *stack) {
-	int32_t x;
+#ifdef CVM_KERNEL_IAPPEND
+	// bitwise negation 
+	static int exec_not(stack_t *stack) {
+		int32_t x;
 
-	x = ~*(int32_t*)stack_pop(stack);
-	stack_push(stack, &x);
+		x = ~*(int32_t*)stack_pop(stack);
+		stack_push(stack, &x);
 
-	return 0;
-}
-
-// binary operation @ -> y = y @ x
-static int exec_binop(stack_t *stack, uint8_t opcode) {
-	int32_t x, y;
-
-	if (stack_size(stack) < 2) {
-		return wrap_return(opcode, 1);
+		return 0;
 	}
 
-	x = *(int32_t*)stack_pop(stack);
-	y = *(int32_t*)stack_pop(stack);
+	// binary operation @ -> y = y @ x
+	static int exec_binop(stack_t *stack, uint8_t opcode) {
+		int32_t x, y;
 
-	switch(opcode) {
-		case C_ADD:	y += x;		break;
-		case C_SUB:	y -= x;		break;
-		case C_MUL:	y *= x;		break;
-		case C_DIV:	y /= x;		break;
-		case C_MOD: y %= x;		break;
-		case C_AND: y &= x;		break;
-		case C_OR: 	y |= x;		break;
-		case C_XOR: y ^= x;		break;
-		case C_SHR:	y >>= x;	break;
-		case C_SHL:	y <<= x;	break;
-		default: 	return wrap_return(opcode, 2);
+		if (stack_size(stack) < 2) {
+			return wrap_return(opcode, 1);
+		}
+
+		x = *(int32_t*)stack_pop(stack);
+		y = *(int32_t*)stack_pop(stack);
+
+		switch(opcode) {
+			case C_ADD:	y += x;		break;
+			case C_SUB:	y -= x;		break;
+			case C_MUL:	y *= x;		break;
+			case C_DIV:	y /= x;		break;
+			case C_MOD: y %= x;		break;
+			case C_AND: y &= x;		break;
+			case C_OR: 	y |= x;		break;
+			case C_XOR: y ^= x;		break;
+			case C_SHR:	y >>= x;	break;
+			case C_SHL:	y <<= x;	break;
+			default: 	return wrap_return(opcode, 2);
+		}
+
+		stack_push(stack, &y);
+		return 0;
 	}
 
-	stack_push(stack, &y);
-	return 0;
-}
+	// allocate N values = 0 in stack
+	static int exec_allc(stack_t *stack) {
+		int32_t num, null;
+
+		if (stack_size(stack) == 0) {
+			return wrap_return(C_ALLC, 1);
+		}
+
+		num = *(int32_t*)stack_pop(stack);
+		if (num < 0) {
+			return wrap_return(C_ALLC, 2);
+		}
+
+		if (stack_size(stack)+num >= CVM_KERNEL_SMEMORY) {
+			return wrap_return(C_ALLC, 3);
+		}
+
+		null = 0;
+		for (int i = 0; i < num; ++i) {
+			stack_push(stack, &null);
+		}
+
+		return 0;
+	}
+#endif
 
 // store value in stack by two addresses
 // where first address = in, second address = out
@@ -628,36 +658,13 @@ static int exec_condjmp(stack_t *stack, uint8_t opcode, int32_t *mi) {
 	switch(opcode) {
 		case C_JE:	if(y == x) {*mi = num;} break;
 		case C_JG: 	if(y >  x) {*mi = num;} break;
+	#ifdef CVM_KERNEL_IAPPEND
 		case C_JL:	if(y <  x) {*mi = num;} break;
 		case C_JNE: if(y != x) {*mi = num;} break;
 		case C_JLE: if(y <= x) {*mi = num;} break;
 		case C_JGE:	if(y >= x) {*mi = num;} break;
+	#endif
 		default: 	return wrap_return(opcode, 4);
-	}
-
-	return 0;
-}
-
-// allocate N values = 0 in stack
-static int exec_allc(stack_t *stack) {
-	int32_t num, null;
-
-	if (stack_size(stack) == 0) {
-		return wrap_return(C_ALLC, 1);
-	}
-
-	num = *(int32_t*)stack_pop(stack);
-	if (num < 0) {
-		return wrap_return(C_ALLC, 2);
-	}
-
-	if (stack_size(stack)+num >= CVM_KERNEL_SMEMORY) {
-		return wrap_return(C_ALLC, 3);
-	}
-
-	null = 0;
-	for (int i = 0; i < num; ++i) {
-		stack_push(stack, &null);
 	}
 
 	return 0;
