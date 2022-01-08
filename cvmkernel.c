@@ -351,8 +351,8 @@ extern int cvm_run(int32_t **output, int32_t *input) {
 	int retcode;
 
 	stack = stack_new(CVM_KERNEL_SMEMORY, sizeof(int32_t));
-	for (int i = 0; i < input[0]; ++i) {
-		stack_push(stack, &input[i+1]);
+	for (int i = 1; i <= input[0]; ++i) {
+		stack_push(stack, &input[i]);
 	}
 
 	mi = 0;
@@ -422,8 +422,8 @@ extern int cvm_run(int32_t **output, int32_t *input) {
 	*output = (int32_t*)malloc(sizeof(int32_t)*(mi+1));
 	(*output)[0] = mi;
 
-	for (int i = 0; i < mi; ++i) {
-		(*output)[i+1] = *(int32_t*)stack_pop(stack);
+	for (int i = 1; i <= mi; ++i) {
+		(*output)[i] = *(int32_t*)stack_pop(stack);
 	}
 
 	stack_free(stack);
