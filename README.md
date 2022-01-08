@@ -1,44 +1,32 @@
 # VirtualMachine
 > Stack-based virtual machine. Version 1.0.4.
 
-### Pseudo instructions (num = 2)
-1. [0x11] ";"
-2. [0x22] "labl"
+### Pseudo instructions
+Code | Instruction
+:---: | :---: |
+0xAA | ";" (comment)
+0xBB | "labl" (label)
 
-### Null instructions (num = 2)
-1. [0xAA] "\0" (void string)
-2. [0xBB] "\1" (undefined code)
+### Null instructions
+Code | Instruction
+:---: | :---: |
+0xAA | (void string)
+0xBB | (undefined code)
 
-### Main instructions (num = 11)
-1.  [0x0A] "push"  
-2.  [0x0B] "pop"   
-3.  [0x0C] "inc"   
-4.  [0x0D] "dec"   
-5.  [0x0E] "jg"    
-6.  [0x0F] "je"    
-7.  [0x1A] "jmp"    
-8.  [0x1B] "stor" 
-9.  [0x1C] "load"  
-10. [0x1D] "call"  
-11. [0x1E] "hlt"   
-
-### Additional instructions (num = 16)
-1.  [0xA0] "add"  
-2.  [0xB0] "sub"   
-3.  [0xC0] "mul"   
-4.  [0xD0] "div"   
-5.  [0xE0] "mod"    
-6.  [0xF0] "shr"    
-7.  [0xA1] "shl"    
-8.  [0xB1] "xor" 
-9.  [0xC1] "and"  
-10. [0xD1] "or"  
-11. [0xE1] "not"   
-12. [0xF1] "jl"   
-13. [0xA2] "jne"   
-14. [0xB2] "jle"   
-15. [0xC2] "jge"   
-16. [0xD2] "allc"   
+### Main instructions
+Bytecode | Stack | Args | Instruction
+:---: | :---: | :---: | :---: |
+0x0A | 0 | 1 | push
+0x0B | 1 | 0 | pop
+0x0C | 1 | 0 | inc
+0x0D | 1 | 0 | dec
+0x0E | 3 | 0 | jg
+0x0F | 3 | 0 | je
+0x1A | 1 | 0 | jmp
+0x1B | 2 | 0 | stor
+0x1C | 1 | 0 | load
+0x1D | 1 | 0 | call
+0x1E | 0 | 0 | hlt
 
 ### Interface functions
 ```c
@@ -46,6 +34,26 @@ extern int cvm_compile(FILE *output, FILE *input);
 extern int cvm_load(uint8_t *memory, int32_t msize);
 extern int cvm_run(int32_t **output, int32_t *input);
 ```
+
+### Additional instructions
+Bytecode | Stack | Args | Instruction
+:---: | :---: | :---: | :---: |
+0xA0 | 2 | 0 | add
+0xB0 | 2 | 0 | sub
+0xC0 | 2 | 0 | mul
+0xD0 | 2 | 0 | div
+0xE0 | 2 | 0 | mod
+0xF0 | 2 | 0 | shr
+0xA1 | 2 | 0 | shl
+0xB1 | 2 | 0 | xor
+0xC1 | 2 | 0 | and
+0xD1 | 2 | 0 | or
+0xE1 | 1 | 0 | not
+0xF1 | 3 | 0 | jl
+0xA2 | 3 | 0 | jne
+0xB2 | 3 | 0 | jle
+0xC2 | 3 | 0 | jge
+0xD2 | 1 | 0 | allc
 
 ### Compile and run
 ```

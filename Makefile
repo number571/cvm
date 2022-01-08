@@ -13,6 +13,6 @@ build: $(FILES)
 	$(CC) -o cvm $(CFLAGS) $(FILES)
 run: main.vms
 	./cvm build main.vms -o main.vme
-	./cvm run main.vme 3 2 1
+	./cvm run main.vme
 clean:
 	rm -f cvm main.vme
