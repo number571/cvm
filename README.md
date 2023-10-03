@@ -4,8 +4,8 @@
 ### Pseudo instructions
 Code | Instruction
 :---: | :---: |
-0xAA | ";" (comment)
-0xBB | "labl" (label)
+0x11 | ";" (comment)
+0x22 | "labl" (label)
 
 ### Null instructions
 Code | Instruction
