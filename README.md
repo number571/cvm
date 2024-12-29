@@ -1,5 +1,5 @@
 # VirtualMachine
-> Stack-based virtual machine. Version 1.0.4.
+> Stack-based virtual machine. Version 1.0.5.
 
 ### Pseudo instructions
 Code | Instruction
@@ -22,11 +22,10 @@ Bytecode | Stack | Args | Instruction
 0x0D | 1 | 0 | dec
 0x0E | 3 | 0 | jg
 0x0F | 3 | 0 | je
-0x1A | 1 | 0 | jmp
-0x1B | 2 | 0 | stor
-0x1C | 1 | 0 | load
-0x1D | 1 | 0 | call
-0x1E | 0 | 0 | hlt
+0x1A | 2 | 0 | stor
+0x1B | 1 | 0 | load
+0x1C | 1 | 0 | call
+0x1D | 0 | 0 | hlt
 
 ### Interface functions
 ```c
@@ -49,69 +48,31 @@ Bytecode | Stack | Args | Instruction
 0xC1 | 2 | 0 | and
 0xD1 | 2 | 0 | or
 0xE1 | 1 | 0 | not
-0xF1 | 3 | 0 | jl
-0xA2 | 3 | 0 | jne
-0xB2 | 3 | 0 | jle
-0xC2 | 3 | 0 | jge
-0xD2 | 1 | 0 | allc
+0xF1 | 1 | 0 | jmp
+0xA2 | 3 | 0 | jl
+0xB2 | 3 | 0 | jne
+0xC2 | 3 | 0 | jle
+0xD2 | 3 | 0 | jge
+0xE2 | 1 | 0 | allc
 
 ### Compile and run
-```
-$ make install
-> git clone https://github.com/number571/extclib.git
-$ make 
-> gcc -o cvm -Wall -std=c99 cvm.c cvmkernel.c extclib/type/stack.c extclib/type/hashtab.c extclib/type/list.c 
-> ./cvm build main.vms -o main.vme
-> ./cvm run main.vme
-> 
+```bash
+$ cp examples/fact10.vms main.vms
+$ make
 {
-	"result": [50],
+	"result": [3628800],
 	"return": 0
 }
 ```
 
-### Example: mul5 function (assembly code)
-```asm
-labl _start
-	push begin 
-	jmp
-
-; main
-labl begin
-	; mul5(x) = x * 5
-	; where x = 10
-	push 10
-	push mul5
-	call
-	push end
-	jmp	
-
-; exit 
-labl end
-	hlt
-
-; x = arg[1]
-labl mul5
-	; y = x * 5
-	push -2
-	load 
-	push 5
-	mul
-
-	; x = y
-	push -1
-	push -3
-	stor 
-
-	; return
-	pop
-	jmp
-```
-
-### Example: mul5 function (binary code)
-```
-0a00 0000 061a 0a00 0000 0a0a 0000 0018
-1d0a 0000 0017 1a1e 0aff ffff fe1c 0a00
-0000 05c0 0aff ffff ff0a ffff fffd 1b0b
-1a
+```bash
+$ hexdump main.vme
+0000000 000a 0000 0a0a 0000 1200 0a1c 0000 1100
+0000010 1df1 ff0a ffff 1bfe ff0a ffff 1bff 000a
+0000020 0000 0a02 0000 6000 0aa2 ffff ffff 0a1b
+0000030 0000 0100 0ab0 ffff ffff ff0a ffff 1afe
+0000040 0a0b ffff fdff 0a1b ffff feff c01b ff0a
+0000050 ffff 0aff ffff fcff 0b1a 000a 0000 f118
+0000060 f10b                                   
+0000062
 ```

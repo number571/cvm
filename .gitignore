@@ -4,3 +4,4 @@ cvm.exe
 *.o
 test/
 main.vme 
+main.vms 

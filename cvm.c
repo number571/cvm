@@ -52,7 +52,7 @@ int main(int argc, char const *argv[]) {
 
     // cvm help
     if (argc == 2 && strcmp(argv[1], CVM_HELP) == 0) {
-        printf("help: \n\t$ cvm [build|run] file {if build [-o outfile]}\n");
+        printf("help: \n\t$ cvm [build|run] <infile> {if build [-o <outfile>]}\n");
         return ERR_NONE;
     }
 

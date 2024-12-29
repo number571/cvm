@@ -6,24 +6,15 @@
 
 #include "cvmkernel.h"
 
-#include "extclib/type/hashtab.h"
-#include "extclib/type/stack.h"
-
-// Comment this line if you are
-// need use only main inctructions.
-#define CVM_KERNEL_IAPPEND
+#include "typeslib/hashtab.h"
+#include "typeslib/stack.h"
 
 // Number of all instructions.
 #ifdef CVM_KERNEL_IAPPEND
 	#define CVM_KERNEL_ISIZE 31
 #else
-	#define CVM_KERNEL_ISIZE 15
+	#define CVM_KERNEL_ISIZE 14
 #endif
-
-// Memory settings.
-#define CVM_KERNEL_SMEMORY (1 << 10) // 1024 INT32
-#define CVM_KERNEL_HMEMORY (1 << 10) // 1024 LIST
-#define CVM_KERNEL_CMEMORY (4 << 10) // 4096 BYTE
 
 // N - number
 // C - char
@@ -37,21 +28,20 @@ enum {
 	C_UNDF = 0xAA, // 0 bytes
 	C_VOID = 0xBB, // 0 bytes
 	// 0xNC 
-	// MAIN INSTRUCTIONS (11)
+	// MAIN INSTRUCTIONS (10)
 	C_PUSH = 0x0A, // 5 bytes
 	C_POP  = 0x0B, // 1 byte
 	C_INC  = 0x0C, // 1 byte
 	C_DEC  = 0x0D, // 1 byte
 	C_JG   = 0x0E, // 1 byte
 	C_JE   = 0x0F, // 1 byte
-	C_JMP  = 0x1A, // 1 byte
-	C_STOR = 0x1B, // 1 byte
-	C_LOAD = 0x1C, // 1 byte
-	C_CALL = 0x1D, // 1 byte
-	C_HLT  = 0x1E, // 1 byte
+	C_STOR = 0x1A, // 1 byte
+	C_LOAD = 0x1B, // 1 byte
+	C_CALL = 0x1C, // 1 byte
+	C_HLT  = 0x1D, // 1 byte
 #ifdef CVM_KERNEL_IAPPEND
 	// 0xCN 
-	// ADD INSTRUCTIONS (16)
+	// ADD INSTRUCTIONS (17)
 	C_ADD  = 0xA0, // 1 byte
 	C_SUB  = 0xB0, // 1 byte
 	C_MUL  = 0xC0, // 1 byte
@@ -63,11 +53,12 @@ enum {
 	C_AND  = 0xC1, // 1 byte
 	C_OR   = 0xD1, // 1 byte
 	C_NOT  = 0xE1, // 1 byte
-	C_JL   = 0xF1, // 1 byte
-	C_JNE  = 0xA2, // 1 byte
-	C_JLE  = 0xB2, // 1 byte
-	C_JGE  = 0xC2, // 1 byte
-	C_ALLC = 0xD2, // 1 byte
+	C_JMP  = 0xF1, // 1 byte
+	C_JL   = 0xA2, // 1 byte
+	C_JNE  = 0xB2, // 1 byte
+	C_JLE  = 0xC2, // 1 byte
+	C_JGE  = 0xD2, // 1 byte
+	C_ALLC = 0xE2, // 1 byte
 #endif
 };
 
@@ -94,7 +85,6 @@ static struct virtual_machine {
 		{ C_DEC,  "dec"  }, // 0 arg, 1 stack
 		{ C_JG,   "jg"   }, // 0 arg, 3 stack
 		{ C_JE,   "je"   }, // 0 arg, 3 stack
-		{ C_JMP,  "jmp"  }, // 0 arg, 1 stack
 		{ C_STOR, "stor" }, // 0 arg, 2 stack
 		{ C_LOAD, "load" }, // 0 arg, 1 stack
 		{ C_CALL, "call" }, // 0 arg, 1 stack
@@ -112,6 +102,7 @@ static struct virtual_machine {
 		{ C_AND,  "and"  }, // 0 arg, 2 stack
 		{ C_OR,   "or"   }, // 0 arg, 2 stack
 		{ C_NOT,  "not"  }, // 0 arg, 1 stack
+		{ C_JMP,  "jmp"  }, // 0 arg, 1 stack
 		{ C_JL,   "jl"   }, // 0 arg, 3 stack
 		{ C_JNE,  "jne"  }, // 0 arg, 3 stack
 		{ C_JLE,  "jle"  }, // 0 arg, 3 stack
@@ -134,6 +125,7 @@ static char *str_to_lower(char *str);
 	static int exec_not(stack_t *stack);
 	static int exec_binop(stack_t *stack, uint8_t opcode);
 	static int exec_allc(stack_t *stack);
+	static int exec_jmp(stack_t *stack, int32_t *mi);
 #endif 
 
 static int exec_push(stack_t *stack, int32_t *mi);
@@ -141,8 +133,7 @@ static int exec_pop(stack_t *stack);
 static int exec_incdec(stack_t *stack, uint8_t opcode);
 static int exec_stor(stack_t *stack);
 static int exec_load(stack_t *stack);
-extern int exec_jmp(stack_t *stack, int32_t *mi);
-static int exec_condjmp(stack_t *stack, uint8_t opcode, int32_t *mi);
+static int exec_jmpif(stack_t *stack, uint8_t opcode, int32_t *mi);
 static int exec_call(stack_t *stack, int32_t *mi);
 
 static uint32_t join_8bits_to_32bits(uint8_t *bytes);
@@ -379,7 +370,7 @@ extern int cvm_run(int32_t **output, int32_t *input) {
 			case C_JGE: case C_JLE: case C_JNE: case C_JL: 
 		#endif 
 			case C_JG: case C_JE: 
-				retcode = exec_condjmp(stack, opcode, &mi);
+				retcode = exec_jmpif(stack, opcode, &mi);
 			break;
 			case C_PUSH:
 				retcode = exec_push(stack, &mi);
@@ -632,7 +623,7 @@ extern int exec_jmp(stack_t *stack, int32_t *mi) {
 }
 
 // jump to address in code memory if condition = true
-static int exec_condjmp(stack_t *stack, uint8_t opcode, int32_t *mi) {
+static int exec_jmpif(stack_t *stack, uint8_t opcode, int32_t *mi) {
 	int32_t num, x, y;
 
 	if (stack_size(stack) < 3) {
