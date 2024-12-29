@@ -33,8 +33,8 @@ enum {
 	C_POP  = 0x0B, // 1 byte
 	C_INC  = 0x0C, // 1 byte
 	C_DEC  = 0x0D, // 1 byte
-	C_JG   = 0x0E, // 1 byte
-	C_JE   = 0x0F, // 1 byte
+	C_JMP  = 0x0E, // 1 byte
+	C_JG   = 0x0F, // 1 byte
 	C_STOR = 0x1A, // 1 byte
 	C_LOAD = 0x1B, // 1 byte
 	C_CALL = 0x1C, // 1 byte
@@ -53,7 +53,7 @@ enum {
 	C_AND  = 0xC1, // 1 byte
 	C_OR   = 0xD1, // 1 byte
 	C_NOT  = 0xE1, // 1 byte
-	C_JMP  = 0xF1, // 1 byte
+	C_JE   = 0xF1, // 1 byte
 	C_JL   = 0xA2, // 1 byte
 	C_JNE  = 0xB2, // 1 byte
 	C_JLE  = 0xC2, // 1 byte
@@ -83,8 +83,8 @@ static struct virtual_machine {
 		{ C_POP,  "pop"  }, // 0 arg, 1 stack
 		{ C_INC,  "inc"  }, // 0 arg, 1 stack
 		{ C_DEC,  "dec"  }, // 0 arg, 1 stack
+		{ C_JMP,  "jmp"  }, // 0 arg, 1 stack
 		{ C_JG,   "jg"   }, // 0 arg, 3 stack
-		{ C_JE,   "je"   }, // 0 arg, 3 stack
 		{ C_STOR, "stor" }, // 0 arg, 2 stack
 		{ C_LOAD, "load" }, // 0 arg, 1 stack
 		{ C_CALL, "call" }, // 0 arg, 1 stack
@@ -102,7 +102,7 @@ static struct virtual_machine {
 		{ C_AND,  "and"  }, // 0 arg, 2 stack
 		{ C_OR,   "or"   }, // 0 arg, 2 stack
 		{ C_NOT,  "not"  }, // 0 arg, 1 stack
-		{ C_JMP,  "jmp"  }, // 0 arg, 1 stack
+		{ C_JE,   "je"   }, // 0 arg, 3 stack
 		{ C_JL,   "jl"   }, // 0 arg, 3 stack
 		{ C_JNE,  "jne"  }, // 0 arg, 3 stack
 		{ C_JLE,  "jle"  }, // 0 arg, 3 stack
@@ -125,7 +125,6 @@ static char *str_to_lower(char *str);
 	static int exec_not(stack_t *stack);
 	static int exec_binop(stack_t *stack, uint8_t opcode);
 	static int exec_allc(stack_t *stack);
-	static int exec_jmp(stack_t *stack, int32_t *mi);
 #endif 
 
 static int exec_push(stack_t *stack, int32_t *mi);
@@ -133,6 +132,7 @@ static int exec_pop(stack_t *stack);
 static int exec_incdec(stack_t *stack, uint8_t opcode);
 static int exec_stor(stack_t *stack);
 static int exec_load(stack_t *stack);
+static int exec_jmp(stack_t *stack, int32_t *mi);
 static int exec_jmpif(stack_t *stack, uint8_t opcode, int32_t *mi);
 static int exec_call(stack_t *stack, int32_t *mi);
 
@@ -647,10 +647,10 @@ static int exec_jmpif(stack_t *stack, uint8_t opcode, int32_t *mi) {
 	y = *(int32_t*)stack_pop(stack);
 
 	switch(opcode) {
-		case C_JE:	if(y == x) {*mi = num;} break;
 		case C_JG: 	if(y >  x) {*mi = num;} break;
 	#ifdef CVM_KERNEL_IAPPEND
 		case C_JL:	if(y <  x) {*mi = num;} break;
+		case C_JE:	if(y == x) {*mi = num;} break;
 		case C_JNE: if(y != x) {*mi = num;} break;
 		case C_JLE: if(y <= x) {*mi = num;} break;
 		case C_JGE:	if(y >= x) {*mi = num;} break;
