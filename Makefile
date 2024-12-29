@@ -9,7 +9,7 @@ default: build run
 build: $(FILES)
 	$(CC) -o cvm $(CFLAGS) $(FILES)
 run:
-	./cvm build main.asm -o main.bcode
-	./cvm run main.bcode
+	./cvm build main.asm -o main.bcd
+	./cvm run main.bcd
 clean:
-	rm -f cvm main.asm main.bcode
+	rm -f cvm main.asm main.bcd

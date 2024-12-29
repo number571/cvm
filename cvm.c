@@ -7,7 +7,7 @@
 #define CVM_HELP    "help"
 #define CVM_RUN     "run"
 #define CVM_BUILD   "build"
-#define CVM_OUTFILE "main.vme"
+#define CVM_OUTFILE "main.bcd"
 
 enum {
     ERR_NONE    = 0x00,

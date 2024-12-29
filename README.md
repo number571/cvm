@@ -66,7 +66,7 @@ $ make
 ```
 
 ```bash
-$ hexdump main.bcode
+$ hexdump main.bcd
 0000000 000a 0000 0a0a 0000 1200 0a1c 0000 1100
 0000010 1df1 ff0a ffff 1bfe ff0a ffff 1bff 000a
 0000020 0000 0a02 0000 6000 0aa2 ffff ffff 0a1b
