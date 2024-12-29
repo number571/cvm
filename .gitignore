@@ -3,5 +3,5 @@ cvm
 cvm.exe
 *.o
 test/
-main.vme 
+main.bcd 
 main.asm 

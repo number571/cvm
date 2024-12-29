@@ -14,10 +14,10 @@ labl fact
     load
 labl _fact_for
     ; IF B < 2
-    push -1
+    push _fact_end
+    push -2
     load
     push 2
-    push _fact_end
     jl
     ; B <- B - 1
     push -1

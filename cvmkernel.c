@@ -624,11 +624,14 @@ extern int exec_jmp(stack_t *stack, int32_t *mi) {
 
 // jump to address in code memory if condition = true
 static int exec_jmpif(stack_t *stack, uint8_t opcode, int32_t *mi) {
-	int32_t num, x, y;
+	int32_t x, y, num;
 
 	if (stack_size(stack) < 3) {
 		return wrap_return(opcode, 1);
 	}
+
+	x = *(int32_t*)stack_pop(stack);
+	y = *(int32_t*)stack_pop(stack);
 
 	num = *(int32_t*)stack_pop(stack);
 	if (num < 0) {
@@ -642,10 +645,7 @@ static int exec_jmpif(stack_t *stack, uint8_t opcode, int32_t *mi) {
 	if (num < 0 || num >= VM.cmused) {
 		return wrap_return(opcode, 3);
 	}
-
-	x = *(int32_t*)stack_pop(stack);
-	y = *(int32_t*)stack_pop(stack);
-
+	
 	switch(opcode) {
 		case C_JE:	if(y == x) {*mi = num;} break;
 		case C_JG: 	if(y >  x) {*mi = num;} break;
