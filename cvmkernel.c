@@ -367,9 +367,9 @@ extern int cvm_run(int32_t **output, int32_t *input) {
 			break;
 		#endif
 		#ifdef CVM_KERNEL_IAPPEND
-			case C_JGE: case C_JLE: case C_JNE: case C_JL: 
+			case C_JGE: case C_JLE: case C_JNE: case C_JL: case C_JE: 
 		#endif 
-			case C_JG: case C_JE: 
+			case C_JG: 
 				retcode = exec_jmpif(stack, opcode, &mi);
 			break;
 			case C_PUSH:
