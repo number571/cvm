@@ -1,5 +1,5 @@
 # VirtualMachine
-> Stack-based virtual machine. Version 1.0.5.
+> Stack-based virtual machine. Version 1.0.6.
 
 ### Pseudo instructions
 Code | Instruction
