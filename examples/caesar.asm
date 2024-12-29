@@ -21,11 +21,11 @@ labl caesar
     push 0
 labl caesar_iter
     ; IF I >= S
+    push -1
+    load
+    push -4
+    load
     push caesar_exit
-    push -2
-    load
-    push -5
-    load
     jge
 
     ; A' <- (K + A[I]) mod 26
