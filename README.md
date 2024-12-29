@@ -20,7 +20,7 @@ Bytecode | Stack | Args | Instruction
 0x0B | 1 | 0 | pop
 0x0C | 1 | 0 | inc
 0x0D | 1 | 0 | dec
-0x0E | 3 | 0 | jmp
+0x0E | 1 | 0 | jmp
 0x0F | 3 | 0 | jg
 0x1A | 2 | 0 | stor
 0x1B | 1 | 0 | load
@@ -48,7 +48,7 @@ Bytecode | Stack | Args | Instruction
 0xC1 | 2 | 0 | and
 0xD1 | 2 | 0 | or
 0xE1 | 1 | 0 | not
-0xF1 | 1 | 0 | je
+0xF1 | 3 | 0 | je
 0xA2 | 3 | 0 | jl
 0xB2 | 3 | 0 | jne
 0xC2 | 3 | 0 | jle
