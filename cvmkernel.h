@@ -9,7 +9,6 @@
 
 // Memory settings.
 #define CVM_KERNEL_SMEMORY (1 << 10) // Stack   = 1024 INT32
-#define CVM_KERNEL_HMEMORY (1 << 10) // HashMap = 1024 LIST
 #define CVM_KERNEL_CMEMORY (4 << 10) // Code    = 4096 BYTE
 
 // Interface functions.

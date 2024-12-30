@@ -151,7 +151,7 @@ extern int cvm_compile(FILE *output, FILE *input) {
 	char *arg;
 	uint8_t opcode;
 
-	hashtab = hashtab_new(CVM_KERNEL_HMEMORY);
+	hashtab = hashtab_new(512);
 	bindex = 0;
 
 	// save label addresses into hashtab
