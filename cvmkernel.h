@@ -8,8 +8,8 @@
 #define CVM_KERNEL_IAPPEND
 
 // Memory settings.
-#define CVM_KERNEL_SMEMORY (1 << 10) // Stack   = 1024 INT32
-#define CVM_KERNEL_CMEMORY (4 << 10) // Code    = 4096 BYTE
+#define CVM_KERNEL_SMEMORY (1 << 10) // Stack = 1024 INT32
+#define CVM_KERNEL_CMEMORY (4 << 10) // Code  = 4096 BYTE
 
 // Interface functions.
 extern int cvm_compile(FILE *output, FILE *input);
