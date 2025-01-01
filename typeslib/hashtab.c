@@ -9,7 +9,7 @@ typedef struct hashtab_t {
 	list_t **table;
 } hashtab_t;
 
-static unsigned int _strhash(char *str, size_t size);
+static unsigned int strhash(char *str, size_t size);
 
 extern hashtab_t *hashtab_new(int size) {
 	hashtab_t *ht = (hashtab_t*)malloc(sizeof(hashtab_t));
@@ -29,11 +29,11 @@ extern void hashtab_free(hashtab_t *ht) {
 	free(ht);
 }
 
-extern void *hashtab_select(hashtab_t *ht, char *key) {
-	unsigned int hash = _strhash(key, ht->size);
+extern void *hashtab_get(hashtab_t *ht, char *key) {
+	unsigned int hash = strhash(key, ht->size);
 	size_t lenkey = strlen(key)+1;
 	char *val;
-	for (int i = 0; (val = list_select(ht->table[hash], i)) != NULL; ++i) {
+	for (int i = 0; (val = list_get(ht->table[hash], i)) != NULL; ++i) {
 		if (strcmp(val, key) == 0) {
 			return (void*)val + lenkey;
 		}
@@ -41,12 +41,12 @@ extern void *hashtab_select(hashtab_t *ht, char *key) {
 	return NULL;
 }
 
-extern int hashtab_insert(hashtab_t *ht, char *key, void *elem, int size) {
-	unsigned int hash = _strhash(key, ht->size);
+extern int hashtab_set(hashtab_t *ht, char *key, void *elem, int size) {
+	unsigned int hash = strhash(key, ht->size);
 	size_t lenkey = strlen(key)+1;
 	char *val;
 	int rc, i;
-	for (i = 0; (val = list_select(ht->table[hash], i)) != NULL; ++i) {
+	for (i = 0; (val = list_get(ht->table[hash], i)) != NULL; ++i) {
 		if (strcmp(val, key) == 0) {
 			break;
 		}
@@ -54,26 +54,26 @@ extern int hashtab_insert(hashtab_t *ht, char *key, void *elem, int size) {
 	val = (char*)malloc(size+lenkey);
 	memcpy(val, key, lenkey);
 	memcpy(val+lenkey, elem, size);
-	rc = list_insert(ht->table[hash], i, val, size+lenkey);
+	rc = list_set(ht->table[hash], i, val, size+lenkey);
 	free(val);
 	return rc;
 }
 
-extern int hashtab_delete(hashtab_t *ht, char *key) {
-	unsigned int hash = _strhash(key, ht->size);
+extern int hashtab_del(hashtab_t *ht, char *key) {
+	unsigned int hash = strhash(key, ht->size);
 	char *val;
-	for (int i = 0; (val = list_select(ht->table[hash], i)) != NULL; ++i) {
+	for (int i = 0; (val = list_get(ht->table[hash], i)) != NULL; ++i) {
 		if (strcmp(val, key) == 0) {
-			return list_delete(ht->table[hash], i);
+			return list_del(ht->table[hash], i);
 		}
 	}
 	return -1;
 }
 
-static unsigned int _strhash(char *str, size_t size) {
-    unsigned int hashval;
-    for (hashval = 0; *str != '\0'; ++str) {
-        hashval = *str + 31 * hashval;
-    }
+// K&R 6.6
+static unsigned int strhash(char *s, size_t size) {
+    unsigned hashval;
+    for (hashval = 0; *s != '\0'; s++)
+        hashval = *s + 31 * hashval;
     return hashval % size;
 }

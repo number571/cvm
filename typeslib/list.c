@@ -37,7 +37,7 @@ extern int list_find(list_t *ls, void *elem, int size) {
 	return -1;
 }
 
-extern void *list_select(list_t *ls, int index) {
+extern void *list_get(list_t *ls, int index) {
 	for (int i = 0; ls->next != NULL && i < index; ++i) {
 		ls = ls->next;
 	}
@@ -47,7 +47,7 @@ extern void *list_select(list_t *ls, int index) {
 	return ls->next->elem;
 }
 
-extern int list_insert(list_t *ls, int index, void *elem, int size) {
+extern int list_set(list_t *ls, int index, void *elem, int size) {
 	list_t *root = ls;
 	if (size <= 0) {
 		return 1;
@@ -70,7 +70,7 @@ extern int list_insert(list_t *ls, int index, void *elem, int size) {
 	return 0;
 }
 
-extern int list_delete(list_t *ls, int index) {
+extern int list_del(list_t *ls, int index) {
 	list_t *temp;
 	list_t *root = ls;
 	for (int i = 0; ls->next != NULL && i < index; ++i) {

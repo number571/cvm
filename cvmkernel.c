@@ -172,7 +172,7 @@ extern int cvm_compile(FILE *output, FILE *input) {
 		switch(opcode) {
 			// label instruction -> save current address
 			case C_LABL:
-				hashtab_insert(hashtab, arg, &bindex, sizeof(bindex));
+				hashtab_set(hashtab, arg, &bindex, sizeof(bindex));
 			break;
 			// push instruction -> +5 bytes 
 			case C_PUSH:
@@ -195,12 +195,10 @@ extern int cvm_compile(FILE *output, FILE *input) {
 			// pass null and pseudo instructions
 			case C_VOID: case C_CMNT: case C_LABL:
 			break;
-
 			// push instruction = 5 bytes 
 			case C_PUSH: 
 				compile_push(output, hashtab, arg);
 			break;
-
 			// another instruction = 1 byte
 			default:
 				fprintf(output, "%c", opcode);
@@ -219,7 +217,7 @@ static void compile_push(FILE *output, hashtab_t *hashtab, char *arg) {
 	int32_t *temp;
 	int32_t num;
 
-	temp = hashtab_select(hashtab, arg);
+	temp = hashtab_get(hashtab, arg);
 	if (temp == NULL) {
 		num = atoi(arg);
 	} else {
@@ -372,6 +370,12 @@ extern int cvm_run(int32_t **output, int32_t *input) {
 			case C_JG: 
 				retcode = exec_jmpif(stack, opcode, &mi);
 			break;
+			case C_JMP: 
+				retcode = exec_jmp(stack, &mi);
+			break;
+			case C_CALL: 
+				retcode = exec_call(stack, &mi);
+			break;
 			case C_PUSH:
 				retcode = exec_push(stack, &mi);
 			break;
@@ -386,12 +390,6 @@ extern int cvm_run(int32_t **output, int32_t *input) {
 			break;
 			case C_LOAD: 
 				retcode = exec_load(stack);
-			break;
-			case C_JMP: 
-				retcode = exec_jmp(stack, &mi);
-			break;
-			case C_CALL: 
-				retcode = exec_call(stack, &mi);
 			break;
 			case C_HLT:
 				mi = VM.cmused;
@@ -606,14 +604,6 @@ extern int exec_jmp(stack_t *stack, int32_t *mi) {
 	}
 
 	num = *(int32_t*)stack_pop(stack);
-	if (num < 0) {
-		num = stack_size(stack) + num;
-		if (num < 0) {
-			return wrap_return(C_JMP, 2);
-		}
-		num = *(int32_t*)stack_get(stack, num);
-	}
-
 	if (num < 0 || num >= VM.cmused) {
 		return wrap_return(C_JMP, 3);
 	}
@@ -631,14 +621,6 @@ static int exec_jmpif(stack_t *stack, uint8_t opcode, int32_t *mi) {
 	}
 
 	num = *(int32_t*)stack_pop(stack);
-	if (num < 0) {
-		num = stack_size(stack) + num;
-		if (num < 0) {
-			return wrap_return(opcode, 2);
-		}
-		num = *(int32_t*)stack_get(stack, num);
-	}
-
 	if (num < 0 || num >= VM.cmused) {
 		return wrap_return(opcode, 3);
 	}
