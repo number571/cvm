@@ -1,5 +1,5 @@
 # VirtualMachine
-> Stack-based virtual machine. Version 1.0.6.
+> Stack-based virtual machine. Version 1.0.7
 
 ### Pseudo instructions
 Code | Instruction
@@ -66,13 +66,12 @@ $ make
 ```
 
 ```bash
-$ hexdump main.bcd
-0000000 000a 0000 0a0a 0000 1200 0a1c 0000 1100
-0000010 1df1 ff0a ffff 1bfe ff0a ffff 1bff 000a
-0000020 0000 0a02 0000 6000 0aa2 ffff ffff 0a1b
-0000030 0000 0100 0ab0 ffff ffff ff0a ffff 1afe
-0000040 0a0b ffff fdff 0a1b ffff feff c01b ff0a
-0000050 ffff 0aff ffff fcff 0b1a 000a 0000 f118
-0000060 f10b                                   
-0000062
+$ hexdump --format '16/1 "%02X " "\n"' main.bcd
+0A 00 00 00 0A 0A 00 00 00 12 1C 0A 00 00 00 11
+0E 1D 0A FF FF FF FE 1B 0A FF FF FF FF 1B 0A 00
+00 00 02 0A 00 00 00 60 A2 0A FF FF FF FF 1B 0A
+00 00 00 01 B0 0A FF FF FF FF 0A FF FF FF FE 1A
+0B 0A FF FF FF FD 1B 0A FF FF FF FE 1B C0 0A FF
+FF FF FF 0A FF FF FF FC 1A 0B 0A 00 00 00 18 0E
+0B 0E
 ```
