@@ -120,6 +120,7 @@ static void split_32bits_to_8bits(uint32_t num, uint8_t *bytes);
 static char *str_trim_spaces(char *str);
 static char *str_set_end(char *str);
 static char *str_to_lower(char *str);
+static int str_is_number(char *str);
 
 #ifdef CVM_KERNEL_IAPPEND
 	static int exec_not(stack_t *stack);
@@ -172,6 +173,9 @@ extern int cvm_compile(FILE *output, FILE *input) {
 		switch(opcode) {
 			// label instruction -> save current address
 			case C_LABL:
+				if (strlen(arg) == 0 || str_is_number(arg)) {
+					return 2;
+				}
 				hashtab_set(hashtab, arg, &bindex, sizeof(bindex));
 			break;
 			// push instruction -> +5 bytes 
@@ -197,6 +201,9 @@ extern int cvm_compile(FILE *output, FILE *input) {
 			break;
 			// push instruction = 5 bytes 
 			case C_PUSH: 
+				if (strlen(arg) == 0) {
+					return 3;
+				}
 				compile_push(output, hashtab, arg);
 			break;
 			// another instruction = 1 byte
@@ -282,6 +289,23 @@ static char *str_to_lower(char *str) {
 	}
 
 	return str;
+}
+
+// example: "12345" -> true
+// example: "a12345", "12345a" -> false
+static int str_is_number(char *str) {
+	int len = strlen(str);
+	if (len == 0) {
+		return 0;
+	}
+
+	for (int i = 0; i < len; ++i) {
+		if (!isdigit(str[i])) {
+			return 0;
+		}
+	}
+
+	return 1; 
 }
 
 // example: "  word1 word2 word3" -> "word1 word2 word3"
