@@ -473,12 +473,16 @@ static int exec_pop(stack_t *stack) {
 static int exec_incdec(stack_t *stack, uint8_t opcode) {
 	int32_t x;
 
+	if (stack_size(stack) == 0) {
+		return wrap_return(opcode, 1);
+	}
+
 	x = *(int32_t*)stack_pop(stack);
 
 	switch(opcode) {
 		case C_INC: ++x; break;
 		case C_DEC: --x; break;
-		default: 	return wrap_return(opcode, 1);
+		default: 	return wrap_return(opcode, 2);
 	}
 
 	stack_push(stack, &x);
@@ -489,6 +493,10 @@ static int exec_incdec(stack_t *stack, uint8_t opcode) {
 	// bitwise negation 
 	static int exec_not(stack_t *stack) {
 		int32_t x;
+
+		if (stack_size(stack) == 0) {
+			return wrap_return(C_NOT, 1);
+		}
 
 		x = ~*(int32_t*)stack_pop(stack);
 		stack_push(stack, &x);
