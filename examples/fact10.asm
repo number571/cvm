@@ -1,4 +1,5 @@
 labl start
+    ; A <- 10
     push 10
     push fact
     call
