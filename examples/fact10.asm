@@ -1,12 +1,8 @@
-labl begin
-    push 10
+labl start
+    push 5
     push fact
     call
-    push end
-    jmp
-labl end
     hlt
-
 ; A <- fact(A)
 labl fact
     ; B <- A
@@ -19,6 +15,7 @@ labl _fact_for
     load
     push _fact_end
     jg
+    ; ELSE
     ; B <- B - 1
     push -1
     load
