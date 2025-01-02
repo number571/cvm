@@ -1,5 +1,5 @@
 labl begin
-    push 5
+    push 10
     push fact
     call
     push end
