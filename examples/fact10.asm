@@ -1,5 +1,5 @@
 labl start
-    push 5
+    push 10
     push fact
     call
     hlt
