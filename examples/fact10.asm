@@ -22,8 +22,7 @@ labl _fact_for
     ; B <- B - 1
     push -1
     load
-    push 1
-    sub
+    dec
     push -1
     push -2
     stor
