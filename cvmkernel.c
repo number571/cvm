@@ -174,6 +174,7 @@ extern int cvm_compile(FILE *output, FILE *input) {
 			// label instruction -> save current address
 			case C_LABL:
 				if (strlen(arg) == 0 || str_is_number(arg)) {
+					hashtab_free(hashtab);
 					return 2;
 				}
 				hashtab_set(hashtab, arg, &bindex, sizeof(bindex));
@@ -202,6 +203,7 @@ extern int cvm_compile(FILE *output, FILE *input) {
 			// push instruction = 5 bytes 
 			case C_PUSH: 
 				if (strlen(arg) == 0) {
+					hashtab_free(hashtab);
 					return 3;
 				}
 				compile_push(output, hashtab, arg);
@@ -637,7 +639,7 @@ extern int exec_jmp(stack_t *stack, int32_t *mi) {
 
 	num = *(int32_t*)stack_pop(stack);
 	if (num < 0 || num >= VM.cmused) {
-		return wrap_return(C_JMP, 3);
+		return wrap_return(C_JMP, 2);
 	}
 
 	*mi = num;
@@ -654,7 +656,7 @@ static int exec_jmpif(stack_t *stack, uint8_t opcode, int32_t *mi) {
 
 	num = *(int32_t*)stack_pop(stack);
 	if (num < 0 || num >= VM.cmused) {
-		return wrap_return(opcode, 3);
+		return wrap_return(opcode, 2);
 	}
 
 	x = *(int32_t*)stack_pop(stack);
@@ -669,7 +671,7 @@ static int exec_jmpif(stack_t *stack, uint8_t opcode, int32_t *mi) {
 		case C_JLE: if(y <= x) {*mi = num;} break;
 		case C_JGE:	if(y >= x) {*mi = num;} break;
 	#endif
-		default: 	return wrap_return(opcode, 4);
+		default: 	return wrap_return(opcode, 3);
 	}
 
 	return 0;
